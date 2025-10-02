@@ -28,8 +28,11 @@ The `cj` command is a bash script that manages its own Python virtual environmen
   - Custom exceptions: `ConfigExistsError`, `ConfigNotFoundError`, `ImageNameNotFoundError`
   - Handles credential persistence in `.cj/claude/`
 
+- **`namegen.py`**: Generates random names like `cj-happy-turtle` for container images
+  - `generate_name()`: Returns randomly generated name in format `cj-{adjective}-{noun}`
+  - `is_valid_name()`: Validates name format using regex pattern
+
 - **`container.py`** (planned): Wrapper for macOS `container` command operations
-- **`namegen.py`** (planned): Generates random names like `cj-happy-turtle` for container images
 - **`setup.py`** (planned): Implements `cj setup` - creates Dockerfile and builds container
 - **`update.py`** (planned): Implements `cj update` - rebuilds container with latest base image
 - **`claude.py`** (planned): Implements default `cj` command - runs Claude Code in container
@@ -108,8 +111,8 @@ Tracked in `spec/plan.md` with checkmarks (✓):
 - ✓ Step 0: Self-Bootstrapping Shell Script
 - ✓ Step 1: Project Scaffolding and Development Environment
 - ✓ Step 2: Configuration Management Module
-- Step 3: Random Name Generator (next)
-- Step 4: Container Operations Wrapper
+- ✓ Step 3: Random Name Generator
+- Step 4: Container Operations Wrapper (next)
 - Step 5: Setup Mode Implementation
 - Step 6: Update Mode Implementation
 - Step 7: Claude Mode Implementation
