@@ -407,7 +407,7 @@ CMD ["/usr/bin/zsh"]
 - All tests pass: `pytest tests/test_update.py -v`
 - Code coverage > 90%: `pytest tests/test_update.py --cov=cjlib.update`
 
-## Step 7: Claude Mode Implementation
+## Step 7: Claude Mode Implementation ✓
 
 **Objective:** Implement default `cj` command that runs Claude Code in container.
 
