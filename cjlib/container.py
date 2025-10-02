@@ -63,9 +63,14 @@ class ContainerManager:
             ContainerBuildError: If the build fails
         """
         try:
-            _run_command(["container", "build", "-t", tag, "-f", dockerfile_path, context_dir])
+            result = _run_command(["container", "build", "-t", tag, "-f", dockerfile_path, context_dir])
         except subprocess.CalledProcessError as e:
-            raise ContainerBuildError(f"Failed to build image: {e}") from e
+            error_msg = f"Failed to build image"
+            if e.stderr:
+                error_msg += f"\nError output:\n{e.stderr}"
+            if e.stdout:
+                error_msg += f"\nOutput:\n{e.stdout}"
+            raise ContainerBuildError(error_msg) from e
 
     def image_exists(self, tag: str) -> bool:
         """Check if a container image exists.

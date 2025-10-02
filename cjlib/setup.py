@@ -13,12 +13,14 @@ RUN apt-get update && apt-get install -y \\
     gcc g++ \\
     clang \\
     python3 python3-dev python3-pip python3-venv \\
-    python3-pytest python3-black \\
     vim neovim \\
     zsh \\
     curl \\
     git \\
     && rm -rf /var/lib/apt/lists/*
+
+# Install Python development tools via pip
+RUN python3 -m pip install --break-system-packages pytest black flake8
 
 # Install Rust via rustup
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \\
