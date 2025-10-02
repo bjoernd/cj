@@ -45,6 +45,9 @@ ENV SHELL=/usr/bin/zsh
 # Install Claude Code
 RUN npm install -g @anthropic-ai/claude-code
 
+# Create symlink for .claude.json to persist state in mounted .claude directory
+RUN ln -s /root/.claude/.claude.json /root/.claude.json
+
 # Set working directory
 WORKDIR /workspace
 
