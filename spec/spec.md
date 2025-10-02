@@ -48,3 +48,14 @@ When run without command line arguments, `cj` will read the local .cj directory 
 If no .cj directory is present, cj will provide an error message asking the user to run `cj setup` first.
 
 If the container image specified in .cj is not available, cj will rebuild the container image the same way as if we ran `cj setup`. This will allow updating to latest versions of the base container.
+
+#### Credential Persistence
+
+Claude Code stores its authentication credentials in `~/.claude/settings.json`. To persist credentials across container runs:
+
+1. Create a `.cj/claude` directory during setup (if it doesn't exist)
+2. Always mount `.cj/claude` to `/root/.claude` in the container (read-write)
+3. On first run, Claude Code will create `/root/.claude/settings.json` in the container, which is actually stored in `.cj/claude/settings.json` on the host
+4. On subsequent runs, the credentials are automatically available because the same directory is mounted
+
+This ensures users only need to authenticate once per project, and credentials are stored locally in the project's `.cj/claude` directory.
