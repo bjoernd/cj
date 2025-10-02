@@ -86,9 +86,10 @@ class SetupCommand:
         Returns:
             0 on success, 1 on failure
         """
-        # Check if config already exists
-        if self.config.exists():
-            print("Error: .cj directory already exists. Run 'cj update' to rebuild.")
+        # Check if container setup already exists (Dockerfile present)
+        import os.path
+        if os.path.exists(self.config.get_dockerfile_path()):
+            print("Error: Container setup already exists. Run 'cj update' to rebuild.")
             return 1
 
         # Check if container command is available
@@ -97,8 +98,9 @@ class SetupCommand:
             return 1
 
         try:
-            # Create config directory
-            self.config.create_config_dir()
+            # Create config directory if it doesn't exist (it might exist from venv bootstrapping)
+            import os
+            os.makedirs(self.config.get_config_dir(), exist_ok=True)
 
             # Generate random image name
             image_name = generate_name()
