@@ -32,7 +32,15 @@ The `cj` command is a bash script that manages its own Python virtual environmen
   - `generate_name()`: Returns randomly generated name in format `cj-{adjective}-{noun}`
   - `is_valid_name()`: Validates name format using regex pattern
 
-- **`container.py`** (planned): Wrapper for macOS `container` command operations
+- **`container.py`**: Wrapper for macOS `container` command operations
+  - `ContainerManager` class: Manages container operations
+  - `check_container_available()`: Checks if container command exists
+  - `build_image()`: Builds container image from Dockerfile
+  - `image_exists()`: Checks if image exists in local registry
+  - `run_interactive()`: Runs container interactively with volume mounts
+  - `remove_image()`: Removes container image
+  - Custom exceptions: `ContainerNotAvailableError`, `ContainerBuildError`, `ContainerRunError`
+
 - **`setup.py`** (planned): Implements `cj setup` - creates Dockerfile and builds container
 - **`update.py`** (planned): Implements `cj update` - rebuilds container with latest base image
 - **`claude.py`** (planned): Implements default `cj` command - runs Claude Code in container
@@ -112,8 +120,8 @@ Tracked in `spec/plan.md` with checkmarks (✓):
 - ✓ Step 1: Project Scaffolding and Development Environment
 - ✓ Step 2: Configuration Management Module
 - ✓ Step 3: Random Name Generator
-- Step 4: Container Operations Wrapper (next)
-- Step 5: Setup Mode Implementation
+- ✓ Step 4: Container Operations Wrapper
+- Step 5: Setup Mode Implementation (next)
 - Step 6: Update Mode Implementation
 - Step 7: Claude Mode Implementation
 - Step 8: CLI and Command Routing
