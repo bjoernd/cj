@@ -2,6 +2,13 @@
 
 ## Key Design Decisions
 
+### Self-Bootstrapping Architecture
+The `cj` command is a standalone shell script that requires no prior installation or setup. It automatically manages its own Python virtual environment:
+- On first run, creates `.cj/venv` and installs dependencies
+- On subsequent runs, activates the existing virtual environment
+- Then executes the Python CLI module
+- This ensures users can simply run `./cj` without manual environment setup
+
 ### Credential Persistence
 Claude Code stores authentication credentials in `~/.claude/settings.json`. To persist these across container runs:
 - Create a `.cj/claude` directory during setup
@@ -15,10 +22,12 @@ This approach is simpler than copying files post-execution and ensures credentia
 
 ```
 cj/
+├── cj                       # Self-bootstrapping shell script (main entry point)
 ├── cj/
 │   ├── __init__.py
 │   ├── __main__.py          # Entry point for `python -m cj`
 │   ├── cli.py               # CLI argument parsing and command routing
+│   ├── bootstrap.py         # Virtual environment bootstrapping logic
 │   ├── setup.py             # Setup mode implementation
 │   ├── update.py            # Update mode implementation
 │   ├── claude.py            # Claude mode implementation
@@ -28,6 +37,7 @@ cj/
 ├── tests/
 │   ├── __init__.py
 │   ├── test_cli.py
+│   ├── test_bootstrap.py
 │   ├── test_setup.py
 │   ├── test_update.py
 │   ├── test_claude.py
@@ -36,10 +46,50 @@ cj/
 │   └── test_namegen.py
 ├── setup.py                 # Package setup for installation
 ├── pyproject.toml           # Modern Python packaging configuration
-├── requirements.txt         # Dependencies
+├── requirements.txt         # Runtime dependencies (empty - stdlib only)
 ├── requirements-dev.txt     # Development dependencies (pytest, etc.)
 └── README.md
 ```
+
+## Step 0: Self-Bootstrapping Shell Script
+
+**Objective:** Create the main `cj` shell script that handles virtual environment bootstrapping.
+
+**Implementation Details:**
+
+1. Create executable shell script `cj` in project root with the following behavior:
+   - Detect script directory using `SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"`
+   - Check if `.cj/venv` exists
+   - If not exists:
+     - Print message: "First run detected, setting up environment..."
+     - Create `.cj` directory if it doesn't exist
+     - Create virtual environment: `python3 -m venv .cj/venv`
+     - Activate virtual environment
+     - Install the cj package in editable mode from `$SCRIPT_DIR`
+     - Print message: "Environment setup complete"
+   - If exists:
+     - Activate virtual environment
+   - Execute Python CLI: `python -m cj "$@"`
+   - Pass through exit code
+
+2. The script should handle errors gracefully:
+   - Check if `python3` is available
+   - Check if `venv` module is available
+   - Provide helpful error messages
+
+**File:** `cj` (shell script, no extension)
+
+**Testing:**
+- Manual test: Run `./cj --help` on fresh checkout
+- Verify virtual environment is created in `.cj/venv`
+- Verify subsequent runs reuse the environment
+- Verify arguments are passed through correctly
+
+**Success Criteria:**
+- First run creates virtual environment automatically
+- Subsequent runs activate existing environment
+- Arguments are passed through to Python CLI
+- Script is executable (`chmod +x cj`)
 
 ## Step 1: Project Scaffolding and Development Environment ✓
 
@@ -55,11 +105,12 @@ cj/
    - Python version requirement: >= 3.9
    - No external dependencies (use only stdlib)
 3. Create `setup.py` for backwards compatibility
-4. Create `requirements-dev.txt` with:
+4. Create `requirements.txt` (empty file - all stdlib)
+5. Create `requirements-dev.txt` with:
    - pytest >= 7.0
    - pytest-cov (for code coverage)
-5. Create basic `__init__.py` files in `cj/` and `tests/`
-6. Create a `.gitignore` for Python projects (ignore `__pycache__`, `.pytest_cache`, `*.pyc`, `.cj/`, etc.)
+6. Create basic `__init__.py` files in `cj/` and `tests/`
+7. Create a `.gitignore` for Python projects (ignore `__pycache__`, `.pytest_cache`, `*.pyc`, `.cj/`, etc.)
 
 **Testing:**
 - Install in editable mode: `pip install -e .`
@@ -84,6 +135,7 @@ cj/
    - `IMAGE_NAME_FILE = "image-name"`
    - `DOCKERFILE_NAME = "Dockerfile"`
    - `CLAUDE_DIR = "claude"`
+   - `VENV_DIR = "venv"` (note: managed by shell script, but Config should be aware)
 2. Implement `Config` class with methods:
    - `__init__(self, base_dir: str = ".")`: Store base directory path
    - `get_config_dir(self) -> str`: Return full path to `.cj` directory
@@ -95,7 +147,8 @@ cj/
    - `get_dockerfile_path(self) -> str`: Return path to Dockerfile
    - `get_claude_dir(self) -> str`: Return path to `.cj/claude` directory
    - `ensure_claude_dir(self) -> None`: Create `.cj/claude` directory if it doesn't exist
-   - `cleanup(self) -> None`: Remove `.cj` directory and contents
+   - `get_venv_dir(self) -> str`: Return path to `.cj/venv` directory
+   - `cleanup(self) -> None`: Remove `.cj` directory and contents (including venv)
 3. Add proper error handling with custom exceptions:
    - `ConfigExistsError`: Raised when `.cj` already exists
    - `ConfigNotFoundError`: Raised when `.cj` doesn't exist

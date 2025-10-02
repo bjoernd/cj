@@ -11,6 +11,19 @@ This is a MacOS application and we will be using MacOS's `container` toolilng th
 
 The command line utility will be called `cj` and we will write it in Python.
 
+## Self-Bootstrapping Behavior
+
+The `cj` script is designed to run without any prior setup or installation. It automatically manages its own virtual environment:
+
+1. When executed, `cj` checks if a virtual environment exists in `.cj/venv`
+2. If no virtual environment exists:
+   - Automatically creates one using `python3 -m venv .cj/venv`
+   - Installs required dependencies into the virtual environment
+3. If a virtual environment exists, automatically activates it
+4. Then proceeds with the requested command (setup, update, or claude mode)
+
+This design ensures users can simply run `cj` without needing to manually create virtual environments or install dependencies. The virtual environment is stored in `.cj/venv` to keep it isolated per project.
+
 ## CJ Modes
 
 CJ will allow modal execution.
