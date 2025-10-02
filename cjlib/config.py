@@ -1,5 +1,5 @@
 """Configuration management for .cj directory and its contents."""
-import os
+
 import shutil
 from pathlib import Path
 
@@ -15,16 +15,19 @@ VENV_DIR = "venv"
 # Custom exceptions
 class ConfigExistsError(Exception):
     """Raised when .cj directory already exists."""
+
     pass
 
 
 class ConfigNotFoundError(Exception):
     """Raised when .cj directory doesn't exist."""
+
     pass
 
 
 class ImageNameNotFoundError(Exception):
     """Raised when image-name file doesn't exist."""
+
     pass
 
 
@@ -33,7 +36,7 @@ class Config:
 
     def __init__(self, base_dir: str = "."):
         """Initialize Config with base directory path.
-        
+
         Args:
             base_dir: Base directory for the project (default: current directory)
         """
@@ -41,7 +44,7 @@ class Config:
 
     def get_config_dir(self) -> str:
         """Return full path to .cj directory.
-        
+
         Returns:
             Absolute path to .cj directory
         """
@@ -49,7 +52,7 @@ class Config:
 
     def exists(self) -> bool:
         """Check if .cj directory exists.
-        
+
         Returns:
             True if .cj directory exists, False otherwise
         """
@@ -57,7 +60,7 @@ class Config:
 
     def create_config_dir(self) -> None:
         """Create .cj directory.
-        
+
         Raises:
             ConfigExistsError: If .cj directory already exists
         """
@@ -68,7 +71,7 @@ class Config:
 
     def get_image_name_path(self) -> str:
         """Return path to image-name file.
-        
+
         Returns:
             Absolute path to image-name file
         """
@@ -76,10 +79,10 @@ class Config:
 
     def read_image_name(self) -> str:
         """Read and return image name from file.
-        
+
         Returns:
             Image name as string
-            
+
         Raises:
             ImageNameNotFoundError: If image-name file doesn't exist
         """
@@ -90,7 +93,7 @@ class Config:
 
     def write_image_name(self, name: str) -> None:
         """Write image name to file.
-        
+
         Args:
             name: Image name to write
         """
@@ -99,7 +102,7 @@ class Config:
 
     def get_dockerfile_path(self) -> str:
         """Return path to Dockerfile.
-        
+
         Returns:
             Absolute path to Dockerfile
         """
@@ -107,7 +110,7 @@ class Config:
 
     def get_claude_dir(self) -> str:
         """Return path to .cj/claude directory.
-        
+
         Returns:
             Absolute path to claude directory
         """
@@ -115,7 +118,7 @@ class Config:
 
     def ensure_claude_dir(self) -> None:
         """Create .cj/claude directory if it doesn't exist.
-        
+
         This method is idempotent - it won't error if directory already exists.
         """
         claude_path = self.base_dir / CONFIG_DIR / CLAUDE_DIR
@@ -123,7 +126,7 @@ class Config:
 
     def get_venv_dir(self) -> str:
         """Return path to .cj/venv directory.
-        
+
         Returns:
             Absolute path to venv directory
         """
@@ -131,7 +134,7 @@ class Config:
 
     def cleanup(self) -> None:
         """Remove .cj directory and all its contents (including venv).
-        
+
         This is a destructive operation that removes the entire configuration.
         """
         config_path = self.base_dir / CONFIG_DIR

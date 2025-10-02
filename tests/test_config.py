@@ -1,10 +1,10 @@
 """Tests for cjlib.config module."""
+
 import pytest
 from pathlib import Path
 from cjlib.config import (
     Config,
     ConfigExistsError,
-    ConfigNotFoundError,
     ImageNameNotFoundError,
     CONFIG_DIR,
     IMAGE_NAME_FILE,
@@ -68,17 +68,17 @@ class TestConfig:
         """Test write_image_name() and read_image_name() work together."""
         config = Config(str(tmp_path))
         (tmp_path / CONFIG_DIR).mkdir()
-        
+
         test_name = "cj-happy-turtle"
         config.write_image_name(test_name)
-        
+
         assert config.read_image_name() == test_name
 
     def test_read_image_name_raises_error_when_not_found(self, tmp_path):
         """Test read_image_name() raises ImageNameNotFoundError when file doesn't exist."""
         config = Config(str(tmp_path))
         (tmp_path / CONFIG_DIR).mkdir()
-        
+
         with pytest.raises(ImageNameNotFoundError) as exc_info:
             config.read_image_name()
         assert "not found" in str(exc_info.value)
@@ -99,9 +99,9 @@ class TestConfig:
         """Test ensure_claude_dir() creates directory if it doesn't exist."""
         config = Config(str(tmp_path))
         (tmp_path / CONFIG_DIR).mkdir()
-        
+
         config.ensure_claude_dir()
-        
+
         assert (tmp_path / CONFIG_DIR / CLAUDE_DIR).is_dir()
 
     def test_ensure_claude_dir_is_idempotent(self, tmp_path):
@@ -109,10 +109,10 @@ class TestConfig:
         config = Config(str(tmp_path))
         (tmp_path / CONFIG_DIR).mkdir()
         (tmp_path / CONFIG_DIR / CLAUDE_DIR).mkdir()
-        
+
         # Should not raise error
         config.ensure_claude_dir()
-        
+
         assert (tmp_path / CONFIG_DIR / CLAUDE_DIR).is_dir()
 
     def test_get_venv_dir(self, tmp_path):
@@ -124,35 +124,35 @@ class TestConfig:
     def test_cleanup_removes_entire_config_directory(self, tmp_path):
         """Test cleanup() removes entire .cj directory and contents."""
         config = Config(str(tmp_path))
-        
+
         # Create config directory with various subdirectories and files
         (tmp_path / CONFIG_DIR).mkdir()
         (tmp_path / CONFIG_DIR / CLAUDE_DIR).mkdir()
         (tmp_path / CONFIG_DIR / VENV_DIR).mkdir()
         (tmp_path / CONFIG_DIR / IMAGE_NAME_FILE).write_text("test-image")
         (tmp_path / CONFIG_DIR / DOCKERFILE_NAME).write_text("FROM ubuntu")
-        
+
         config.cleanup()
-        
+
         assert not (tmp_path / CONFIG_DIR).exists()
 
     def test_cleanup_when_config_doesnt_exist(self, tmp_path):
         """Test cleanup() doesn't error when .cj doesn't exist."""
         config = Config(str(tmp_path))
-        
+
         # Should not raise error
         config.cleanup()
-        
+
         assert not (tmp_path / CONFIG_DIR).exists()
 
     def test_write_image_name_strips_whitespace(self, tmp_path):
         """Test that image name is stored exactly as written."""
         config = Config(str(tmp_path))
         (tmp_path / CONFIG_DIR).mkdir()
-        
+
         test_name = "cj-test-name"
         config.write_image_name(test_name)
-        
+
         # Read should strip whitespace
         assert config.read_image_name() == test_name
 
@@ -160,8 +160,8 @@ class TestConfig:
         """Test that read_image_name() strips whitespace."""
         config = Config(str(tmp_path))
         (tmp_path / CONFIG_DIR).mkdir()
-        
+
         # Write with extra whitespace
         (tmp_path / CONFIG_DIR / IMAGE_NAME_FILE).write_text("  cj-test-name\n  ")
-        
+
         assert config.read_image_name() == "cj-test-name"
