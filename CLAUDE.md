@@ -138,3 +138,4 @@ Per implementation plan:
    - Test results
    - Coverage metrics
    - Standard footer with Claude Code attribution
+- Before committing changes to git we always need to check if updates to CLAUDE.md are necessary. We will make these updates and commit them along with the change.
