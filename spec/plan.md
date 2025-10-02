@@ -23,9 +23,9 @@ This approach is simpler than copying files post-execution and ensures credentia
 ```
 cj/
 ├── cj                       # Self-bootstrapping shell script (main entry point)
-├── cj/
+├── cjlib/                   # Python package (renamed from 'cj' to avoid naming conflict)
 │   ├── __init__.py
-│   ├── __main__.py          # Entry point for `python -m cj`
+│   ├── __main__.py          # Entry point for `python -m cjlib`
 │   ├── cli.py               # CLI argument parsing and command routing
 │   ├── bootstrap.py         # Virtual environment bootstrapping logic
 │   ├── setup.py             # Setup mode implementation
@@ -51,7 +51,7 @@ cj/
 └── README.md
 ```
 
-## Step 0: Self-Bootstrapping Shell Script
+## Step 0: Self-Bootstrapping Shell Script ✓
 
 **Objective:** Create the main `cj` shell script that handles virtual environment bootstrapping.
 
@@ -69,7 +69,7 @@ cj/
      - Print message: "Environment setup complete"
    - If exists:
      - Activate virtual environment
-   - Execute Python CLI: `python -m cj "$@"`
+   - Execute Python CLI: `python -m cjlib "$@"`
    - Pass through exit code
 
 2. The script should handle errors gracefully:
@@ -101,7 +101,7 @@ cj/
 2. Initialize `pyproject.toml` with:
    - Project metadata (name: "cj", version: "0.1.0")
    - Build system using setuptools
-   - Entry point: `cj = cj.cli:main`
+   - Entry point: `cj = cjlib.cli:main`
    - Python version requirement: >= 3.9
    - No external dependencies (use only stdlib)
 3. Create `setup.py` for backwards compatibility
@@ -109,12 +109,12 @@ cj/
 5. Create `requirements-dev.txt` with:
    - pytest >= 7.0
    - pytest-cov (for code coverage)
-6. Create basic `__init__.py` files in `cj/` and `tests/`
+6. Create basic `__init__.py` files in `cjlib/` and `tests/`
 7. Create a `.gitignore` for Python projects (ignore `__pycache__`, `.pytest_cache`, `*.pyc`, `.cj/`, etc.)
 
 **Testing:**
 - Install in editable mode: `pip install -e .`
-- Verify package structure: `python -c "import cj"`
+- Verify package structure: `python -c "import cjlib"`
 - Run pytest (should find 0 tests): `pytest tests/`
 
 **Success Criteria:**
@@ -126,7 +126,7 @@ cj/
 
 **Objective:** Implement the configuration management system for handling `.cj` directory and its contents.
 
-**File:** `cj/config.py`
+**File:** `cjlib/config.py`
 
 **Implementation Details:**
 
@@ -175,13 +175,13 @@ cj/
 
 **Success Criteria:**
 - All tests pass: `pytest tests/test_config.py -v`
-- Code coverage > 95%: `pytest tests/test_config.py --cov=cj.config`
+- Code coverage > 95%: `pytest tests/test_config.py --cov=cjlib.config`
 
 ## Step 3: Random Name Generator
 
 **Objective:** Implement random name generator for container images.
 
-**File:** `cj/namegen.py`
+**File:** `cjlib/namegen.py`
 
 **Implementation Details:**
 
@@ -209,13 +209,13 @@ cj/
 
 **Success Criteria:**
 - All tests pass: `pytest tests/test_namegen.py -v`
-- Code coverage 100%: `pytest tests/test_namegen.py --cov=cj.namegen`
+- Code coverage 100%: `pytest tests/test_namegen.py --cov=cjlib.namegen`
 
 ## Step 4: Container Operations Wrapper
 
 **Objective:** Create abstraction layer for macOS `container` command operations.
 
-**File:** `cj/container.py`
+**File:** `cjlib/container.py`
 
 **Implementation Details:**
 
@@ -266,13 +266,13 @@ cj/
 
 **Success Criteria:**
 - All tests pass: `pytest tests/test_container.py -v`
-- Code coverage > 90%: `pytest tests/test_container.py --cov=cj.container`
+- Code coverage > 90%: `pytest tests/test_container.py --cov=cjlib.container`
 
 ## Step 5: Setup Mode Implementation
 
 **Objective:** Implement `cj setup` command that creates project configuration and builds container image.
 
-**File:** `cj/setup.py`
+**File:** `cjlib/setup.py`
 
 **Implementation Details:**
 
@@ -361,13 +361,13 @@ CMD ["/usr/bin/zsh"]
 
 **Success Criteria:**
 - All tests pass: `pytest tests/test_setup.py -v`
-- Code coverage > 90%: `pytest tests/test_setup.py --cov=cj.setup`
+- Code coverage > 90%: `pytest tests/test_setup.py --cov=cjlib.setup`
 
 ## Step 6: Update Mode Implementation
 
 **Objective:** Implement `cj update` command that rebuilds container image with latest base image.
 
-**File:** `cj/update.py`
+**File:** `cjlib/update.py`
 
 **Implementation Details:**
 
@@ -405,13 +405,13 @@ CMD ["/usr/bin/zsh"]
 
 **Success Criteria:**
 - All tests pass: `pytest tests/test_update.py -v`
-- Code coverage > 90%: `pytest tests/test_update.py --cov=cj.update`
+- Code coverage > 90%: `pytest tests/test_update.py --cov=cjlib.update`
 
 ## Step 7: Claude Mode Implementation
 
 **Objective:** Implement default `cj` command that runs Claude Code in container.
 
-**File:** `cj/claude.py`
+**File:** `cjlib/claude.py`
 
 **Implementation Details:**
 
@@ -477,13 +477,13 @@ CMD ["/usr/bin/zsh"]
 
 **Success Criteria:**
 - All tests pass: `pytest tests/test_claude.py -v`
-- Code coverage > 90%: `pytest tests/test_claude.py --cov=cj.claude`
+- Code coverage > 90%: `pytest tests/test_claude.py --cov=cjlib.claude`
 
 ## Step 8: CLI and Command Routing
 
 **Objective:** Implement command-line interface and route commands to appropriate handlers.
 
-**File:** `cj/cli.py`
+**File:** `cjlib/cli.py`
 
 **Implementation Details:**
 
@@ -508,11 +508,11 @@ CMD ["/usr/bin/zsh"]
    - Print clear error messages
    - Return appropriate exit codes
 
-**File:** `cj/__main__.py`
+**File:** `cjlib/__main__.py`
 
 **Implementation Details:**
 ```python
-from cj.cli import main
+from cjlib.cli import main
 import sys
 
 if __name__ == "__main__":
@@ -537,9 +537,9 @@ if __name__ == "__main__":
 
 **Success Criteria:**
 - All tests pass: `pytest tests/test_cli.py -v`
-- Code coverage > 85%: `pytest tests/test_cli.py --cov=cj.cli`
+- Code coverage > 85%: `pytest tests/test_cli.py --cov=cjlib.cli`
 - Can run `cj --help` and see usage information
-- Can run `python -m cj --help` and see usage information
+- Can run `python -m cjlib --help` and see usage information
 
 ## Step 9: Installation and Integration Testing
 
@@ -554,7 +554,7 @@ if __name__ == "__main__":
    - Requirements (macOS with container tool)
 
 2. Verify `pyproject.toml` entry points:
-   - Console script: `cj = cj.cli:main`
+   - Console script: `cj = cjlib.cli:main`
 
 3. Create integration test script `tests/test_integration.py`:
    - These are manual tests (marked with `pytest.mark.skip` by default)
@@ -571,7 +571,7 @@ if __name__ == "__main__":
    ```
 2. Verify `cj` command available: `which cj`
 3. Run all unit tests: `pytest tests/ -v`
-4. Run with coverage: `pytest tests/ --cov=cj --cov-report=html`
+4. Run with coverage: `pytest tests/ --cov=cjlib --cov-report=html`
 5. Verify coverage > 90% overall
 
 **Success Criteria:**
@@ -610,7 +610,7 @@ if __name__ == "__main__":
 4. Add inline comments for complex logic
 
 **Testing:**
-- Run full test suite: `pytest tests/ -v --cov=cj`
+- Run full test suite: `pytest tests/ -v --cov=cjlib`
 - Verify all tests pass
 - Verify coverage > 90%
 - Manual testing of all three modes on macOS with container tool

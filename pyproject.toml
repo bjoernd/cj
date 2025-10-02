@@ -24,7 +24,7 @@ classifiers = [
 ]
 
 [project.scripts]
-cj = "cj.cli:main"
+cj-python = "cjlib.cli:main"
 
 [tool.setuptools.packages.find]
-include = ["cj*"]
+include = ["cjlib*"]
