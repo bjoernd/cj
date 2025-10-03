@@ -183,6 +183,7 @@ class ContainerManager:
         working_dir: str,
         volume_mounts: List[str],
         command: List[str],
+        port_forwards: List[tuple] = None,
     ) -> int:
         """Run a container interactively.
 
@@ -191,6 +192,7 @@ class ContainerManager:
             working_dir: Working directory inside container
             volume_mounts: List of volume mount strings (format: "host:container")
             command: Command to execute in the container
+            port_forwards: Optional list of (host_port, container_port) tuples for port forwarding
 
         Returns:
             int: Exit code from the container
@@ -200,6 +202,11 @@ class ContainerManager:
         """
         # Build the command
         cmd = ["container", "run", "-it", "--rm"]
+
+        # Add port forwards
+        if port_forwards:
+            for host_port, container_port in port_forwards:
+                cmd.extend(["-p", f"{host_port}:{container_port}"])
 
         # Add volume mounts
         for mount in volume_mounts:
@@ -234,3 +241,55 @@ class ContainerManager:
         except Exception:
             # Ignore errors (e.g., image doesn't exist)
             pass
+
+    def setup_reverse_tunnel(
+        self,
+        ssh_private_key_path: str,
+        ssh_port: int = 2222,
+        forward_port: int = 9999,
+    ) -> subprocess.Popen:
+        """Establish SSH reverse tunnel to container.
+
+        Args:
+            ssh_private_key_path: Path to SSH private key for authentication
+            ssh_port: Port on host where container's SSH is forwarded (default: 2222)
+            forward_port: Port to forward from container to host (default: 9999)
+
+        Returns:
+            subprocess.Popen: Process object for the SSH tunnel
+
+        Raises:
+            SSHTunnelError: If tunnel establishment fails
+        """
+        # Build SSH command for reverse tunnel
+        # -R forward_port:localhost:forward_port = reverse tunnel
+        # -N = no command execution
+        # -o StrictHostKeyChecking=no = don't prompt for host key verification
+        # -o UserKnownHostsFile=/dev/null = don't save host key
+        cmd = [
+            "ssh",
+            "-R",
+            f"{forward_port}:localhost:{forward_port}",
+            "-p",
+            str(ssh_port),
+            "-i",
+            ssh_private_key_path,
+            "-N",
+            "-o",
+            "StrictHostKeyChecking=no",
+            "-o",
+            "UserKnownHostsFile=/dev/null",
+            "root@localhost",
+        ]
+
+        try:
+            # Start SSH tunnel in background
+            process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            return process
+        except Exception as e:
+            raise SSHTunnelError(f"Failed to establish SSH tunnel: {e}") from e

@@ -8,6 +8,7 @@ from cjlib.container import (
     ContainerBuildError,
     ContainerRunError,
     SSHKeyError,
+    SSHTunnelError,
     _run_command,
     setup_ssh_keys,
 )
@@ -241,6 +242,120 @@ class TestContainerManager:
         mock_run.assert_called_once_with(
             ["container", "image", "delete", "non-existent-image"], check=False
         )
+
+    @patch("cjlib.container._run_command")
+    def test_run_interactive_with_port_forwards(self, mock_run):
+        """Test run_interactive with port forwarding."""
+        mock_run.return_value = Mock(returncode=0)
+
+        self.manager.run_interactive(
+            image="my-image",
+            working_dir="/workspace",
+            volume_mounts=["host:container"],
+            command=["bash"],
+            port_forwards=[("2222", "22"), ("8080", "80")],
+        )
+
+        expected_cmd = [
+            "container",
+            "run",
+            "-it",
+            "--rm",
+            "-p",
+            "2222:22",
+            "-p",
+            "8080:80",
+            "-v",
+            "host:container",
+            "-w",
+            "/workspace",
+            "my-image",
+            "bash",
+        ]
+        mock_run.assert_called_once_with(expected_cmd, check=False, capture_output=False)
+
+    @patch("cjlib.container._run_command")
+    def test_run_interactive_without_port_forwards(self, mock_run):
+        """Test run_interactive without port forwarding (backwards compatibility)."""
+        mock_run.return_value = Mock(returncode=0)
+
+        self.manager.run_interactive(
+            image="my-image",
+            working_dir="/workspace",
+            volume_mounts=["host:container"],
+            command=["bash"],
+        )
+
+        # Should not include -p flags
+        expected_cmd = [
+            "container",
+            "run",
+            "-it",
+            "--rm",
+            "-v",
+            "host:container",
+            "-w",
+            "/workspace",
+            "my-image",
+            "bash",
+        ]
+        mock_run.assert_called_once_with(expected_cmd, check=False, capture_output=False)
+
+    @patch("subprocess.Popen")
+    def test_setup_reverse_tunnel_success(self, mock_popen):
+        """Test successful reverse tunnel setup."""
+        mock_process = Mock()
+        mock_popen.return_value = mock_process
+
+        result = self.manager.setup_reverse_tunnel(
+            ssh_private_key_path="/path/to/key",
+            ssh_port=2222,
+            forward_port=9999,
+        )
+
+        assert result == mock_process
+        mock_popen.assert_called_once_with(
+            [
+                "ssh",
+                "-R",
+                "9999:localhost:9999",
+                "-p",
+                "2222",
+                "-i",
+                "/path/to/key",
+                "-N",
+                "-o",
+                "StrictHostKeyChecking=no",
+                "-o",
+                "UserKnownHostsFile=/dev/null",
+                "root@localhost",
+            ],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+
+    @patch("subprocess.Popen")
+    def test_setup_reverse_tunnel_with_defaults(self, mock_popen):
+        """Test reverse tunnel setup with default ports."""
+        mock_process = Mock()
+        mock_popen.return_value = mock_process
+
+        result = self.manager.setup_reverse_tunnel(ssh_private_key_path="/path/to/key")
+
+        assert result == mock_process
+        # Should use default ports
+        call_args = mock_popen.call_args[0][0]
+        assert "2222" in call_args
+        assert "9999:localhost:9999" in call_args
+
+    @patch("subprocess.Popen")
+    def test_setup_reverse_tunnel_raises_on_failure(self, mock_popen):
+        """Test that setup_reverse_tunnel raises SSHTunnelError on failure."""
+        mock_popen.side_effect = Exception("SSH failed")
+
+        with pytest.raises(SSHTunnelError, match="Failed to establish SSH tunnel"):
+            self.manager.setup_reverse_tunnel(ssh_private_key_path="/path/to/key")
 
 
 class TestSetupSSHKeys:
