@@ -1,39 +1,10 @@
 """Tests for update mode implementation."""
 
-import subprocess
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 from cjlib.update import UpdateCommand
 from cjlib.config import Config, ConfigNotFoundError
 from cjlib.container import ContainerManager
 from cjlib.setup import DOCKERFILE_TEMPLATE
-
-
-def test_pull_base_image():
-    """Test pulling base image."""
-    config = Mock(spec=Config)
-    container_mgr = Mock(spec=ContainerManager)
-    update_cmd = UpdateCommand(config, container_mgr)
-
-    with patch("subprocess.run") as mock_run:
-        update_cmd._pull_base_image()
-
-        mock_run.assert_called_once_with(
-            ["container", "pull", "ubuntu:25.04"], check=True, capture_output=True
-        )
-
-
-def test_pull_base_image_failure():
-    """Test pull base image raises on failure."""
-    config = Mock(spec=Config)
-    container_mgr = Mock(spec=ContainerManager)
-    update_cmd = UpdateCommand(config, container_mgr)
-
-    with patch("subprocess.run", side_effect=subprocess.CalledProcessError(1, "container")):
-        try:
-            update_cmd._pull_base_image()
-            assert False, "Should have raised CalledProcessError"
-        except subprocess.CalledProcessError:
-            pass
 
 
 def test_regenerate_dockerfile(tmp_path):
@@ -66,8 +37,7 @@ def test_run_success(tmp_path):
 
     update_cmd = UpdateCommand(config, container_mgr)
 
-    with patch("subprocess.run") as mock_run:
-        result = update_cmd.run()
+    result = update_cmd.run()
 
     # Verify success
     assert result == 0
@@ -76,7 +46,6 @@ def test_run_success(tmp_path):
     config.exists.assert_called_once()
     config.read_image_name.assert_called_once()
     config.get_dockerfile_path.assert_called_once()
-    mock_run.assert_called_once()  # pull base image
     container_mgr.build_image.assert_called_once()
 
 
@@ -116,31 +85,6 @@ def test_run_image_name_not_found():
     container_mgr.build_image.assert_not_called()
 
 
-def test_run_pull_failure(tmp_path):
-    """Test failure when base image pull fails."""
-    config_dir = tmp_path / ".cj"
-    config_dir.mkdir(parents=True, exist_ok=True)
-
-    config = Mock(spec=Config)
-    config.exists.return_value = True
-    config.read_image_name.return_value = "cj-test-image"
-    config.get_config_dir.return_value = str(config_dir)
-    config.get_dockerfile_path.return_value = str(config_dir / "Dockerfile")
-
-    container_mgr = Mock(spec=ContainerManager)
-
-    update_cmd = UpdateCommand(config, container_mgr)
-
-    with patch("subprocess.run", side_effect=subprocess.CalledProcessError(1, "container pull")):
-        result = update_cmd.run()
-
-    # Verify failure
-    assert result == 1
-
-    # Verify build not called
-    container_mgr.build_image.assert_not_called()
-
-
 def test_run_build_failure(tmp_path):
     """Test failure when image build fails."""
     config_dir = tmp_path / ".cj"
@@ -157,8 +101,7 @@ def test_run_build_failure(tmp_path):
 
     update_cmd = UpdateCommand(config, container_mgr)
 
-    with patch("subprocess.run"):
-        result = update_cmd.run()
+    result = update_cmd.run()
 
     # Verify failure
     assert result == 1
@@ -179,8 +122,7 @@ def test_run_same_image_name_reused(tmp_path):
 
     update_cmd = UpdateCommand(config, container_mgr)
 
-    with patch("subprocess.run"):
-        result = update_cmd.run()
+    result = update_cmd.run()
 
     # Verify same image name used for rebuild
     assert result == 0
@@ -208,8 +150,7 @@ def test_run_dockerfile_regenerated(tmp_path):
 
     update_cmd = UpdateCommand(config, container_mgr)
 
-    with patch("subprocess.run"):
-        result = update_cmd.run()
+    result = update_cmd.run()
 
     # Verify Dockerfile was regenerated (user customizations lost)
     assert result == 0
@@ -234,8 +175,7 @@ def test_run_build_image_called_with_correct_params(tmp_path):
 
     update_cmd = UpdateCommand(config, container_mgr)
 
-    with patch("subprocess.run"):
-        result = update_cmd.run()
+    result = update_cmd.run()
 
     # Verify build_image called with correct params
     assert result == 0

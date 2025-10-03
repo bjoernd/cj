@@ -1,7 +1,6 @@
 """Update mode implementation for CJ."""
 
 import os
-import subprocess
 from cjlib.config import Config, ConfigNotFoundError
 from cjlib.container import ContainerManager
 from cjlib.setup import DOCKERFILE_TEMPLATE
@@ -19,14 +18,6 @@ class UpdateCommand:
         """
         self.config = config
         self.container_mgr = container_mgr
-
-    def _pull_base_image(self) -> None:
-        """Pull latest base image from registry.
-
-        Raises:
-            subprocess.CalledProcessError: If pull command fails
-        """
-        subprocess.run(["container", "pull", "ubuntu:25.04"], check=True, capture_output=True)
 
     def _regenerate_dockerfile(self, path: str) -> None:
         """Write Dockerfile template to specified path.
@@ -57,11 +48,7 @@ class UpdateCommand:
             self._regenerate_dockerfile(dockerfile_path)
             print(f"Regenerated Dockerfile at {dockerfile_path}")
 
-            # Pull latest base image
-            print("Pulling latest base image ubuntu:25.04...")
-            self._pull_base_image()
-
-            # Rebuild container image with same tag
+            # Rebuild container image with same tag (will use latest base image)
             print(f"Rebuilding container image '{image_name}'...")
             context_dir = os.path.dirname(self.config.get_config_dir())
             self.container_mgr.build_image(dockerfile_path, image_name, context_dir)
@@ -72,9 +59,6 @@ class UpdateCommand:
 
         except ConfigNotFoundError as e:
             print(f"Error: {e}")
-            return 1
-        except subprocess.CalledProcessError as e:
-            print(f"Error pulling base image: {e}")
             return 1
         except Exception as e:
             print(f"Error during update: {e}")

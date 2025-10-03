@@ -63,9 +63,9 @@ class ContainerManager:
             ContainerBuildError: If the build fails
         """
         try:
-            result = _run_command(["container", "build", "-t", tag, "-f", dockerfile_path, context_dir])
+            _run_command(["container", "build", "-t", tag, "-f", dockerfile_path, context_dir])
         except subprocess.CalledProcessError as e:
-            error_msg = f"Failed to build image"
+            error_msg = "Failed to build image"
             if e.stderr:
                 error_msg += f"\nError output:\n{e.stderr}"
             if e.stdout:
