@@ -179,6 +179,7 @@ def test_run_build_image_called_with_correct_params(tmp_path):
 
     # Verify build_image called with correct params
     assert result == 0
+    expected_log_file = str(config_dir / "update.log")
     container_mgr.build_image.assert_called_once_with(
-        dockerfile_path, "cj-test-image", str(tmp_path)
+        dockerfile_path, "cj-test-image", str(tmp_path), expected_log_file
     )

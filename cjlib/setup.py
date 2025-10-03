@@ -116,10 +116,12 @@ class SetupCommand:
             # Build container image
             print(f"Building container image '{image_name}'...")
             context_dir = os.path.dirname(self.config.get_config_dir())
-            self.container_mgr.build_image(dockerfile_path, image_name, context_dir)
+            log_file = os.path.join(self.config.get_config_dir(), "build.log")
+            self.container_mgr.build_image(dockerfile_path, image_name, context_dir, log_file)
 
             # Write image name to config
             self.config.write_image_name(image_name)
+            print(f"Build log saved to {log_file}")
 
             print(f"Successfully created container image '{image_name}'")
             print("Run 'cj' to start Claude Code in the container")

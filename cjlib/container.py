@@ -51,25 +51,42 @@ class ContainerManager:
         """
         return shutil.which("container") is not None
 
-    def build_image(self, dockerfile_path: str, tag: str, context_dir: str) -> None:
+    def build_image(
+        self, dockerfile_path: str, tag: str, context_dir: str, log_file: str = None
+    ) -> None:
         """Build a container image.
 
         Args:
             dockerfile_path: Path to the Dockerfile
             tag: Tag name for the image
             context_dir: Build context directory
+            log_file: Optional path to log file for build output
 
         Raises:
             ContainerBuildError: If the build fails
         """
         try:
-            _run_command(["container", "build", "-t", tag, "-f", dockerfile_path, context_dir])
+            result = _run_command(
+                ["container", "build", "-t", tag, "-f", dockerfile_path, context_dir]
+            )
+            if log_file:
+                with open(log_file, "w") as f:
+                    if result.stdout:
+                        f.write(result.stdout)
+                    if result.stderr:
+                        f.write(result.stderr)
         except subprocess.CalledProcessError as e:
             error_msg = "Failed to build image"
             if e.stderr:
                 error_msg += f"\nError output:\n{e.stderr}"
             if e.stdout:
                 error_msg += f"\nOutput:\n{e.stdout}"
+            if log_file:
+                with open(log_file, "w") as f:
+                    if e.stdout:
+                        f.write(e.stdout)
+                    if e.stderr:
+                        f.write(e.stderr)
             raise ContainerBuildError(error_msg) from e
 
     def image_exists(self, tag: str) -> bool:

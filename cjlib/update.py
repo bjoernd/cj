@@ -51,9 +51,11 @@ class UpdateCommand:
             # Rebuild container image with same tag (will use latest base image)
             print(f"Rebuilding container image '{image_name}'...")
             context_dir = os.path.dirname(self.config.get_config_dir())
-            self.container_mgr.build_image(dockerfile_path, image_name, context_dir)
+            log_file = os.path.join(self.config.get_config_dir(), "update.log")
+            self.container_mgr.build_image(dockerfile_path, image_name, context_dir, log_file)
 
             print(f"Successfully updated container image '{image_name}'")
+            print(f"Update log saved to {log_file}")
             print("Run 'cj' to start Claude Code in the updated container")
             return 0
 
