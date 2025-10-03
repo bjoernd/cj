@@ -8,6 +8,7 @@ CJ is a macOS application that runs Claude Code within an isolated container env
 - **Pre-installed Tools**: Includes GCC, Clang, Python, Rust, Node.js, vim, neovim, zsh, and oh-my-zsh
 - **Self-Bootstrapping**: No manual installation required - the `cj` script manages its own environment
 - **Credential Persistence**: Claude Code credentials are automatically preserved across container runs
+- **Browser Redirection**: URLs opened in the container automatically open in your host browser
 - **Easy Updates**: Simple command to rebuild containers with the latest base image
 
 ## Prerequisites
@@ -99,6 +100,7 @@ your-project/
 ├── .cj/
 │   ├── venv/              # Python virtual environment (auto-managed)
 │   ├── claude/            # Claude Code credentials (persisted)
+│   ├── ssh/               # SSH keys for browser redirection (auto-generated)
 │   ├── image-name         # Container image name
 │   └── Dockerfile         # Container definition
 └── (your project files)
@@ -133,6 +135,15 @@ Claude Code credentials are persisted through volume mounts:
 - `.cj/claude/` on host → `/root/.claude` in container
 - First run creates credentials in the container
 - Subsequent runs automatically have credentials available
+
+### Browser Redirection
+
+URLs opened inside the container automatically open on your host browser:
+
+- HTTP/HTTPS URLs open directly in your default browser
+- `file://` URLs are translated from container paths to host paths
+- Works automatically - no configuration needed
+- If SSH key generation fails, browser redirection is disabled but Claude Code continues to work
 
 ### Container Isolation
 
@@ -196,6 +207,7 @@ CJ consists of:
   - `claude.py`: Claude mode implementation
   - `config.py`: Configuration management
   - `container.py`: Container operations wrapper
+  - `browser_bridge.py`: Browser URL redirection
   - `namegen.py`: Random name generator
 
 ## License
