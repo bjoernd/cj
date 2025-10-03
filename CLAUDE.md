@@ -57,10 +57,30 @@ The `cj` command is a bash script that manages its own Python virtual environmen
   - First matching path mapping wins (prefix matching)
   - Logs warnings for unmapped file:// paths
 
-- **`setup.py`** (planned): Implements `cj setup` - creates Dockerfile and builds container
-- **`update.py`** (planned): Implements `cj update` - rebuilds container with latest base image
-- **`claude.py`** (planned): Implements default `cj` command - runs Claude Code in container
-- **`cli.py`**: Currently minimal, will route commands to appropriate handlers
+- **`setup.py`**: Implements `cj setup` - creates Dockerfile and builds container
+  - `SetupCommand` class: Manages setup workflow
+  - `DOCKERFILE_TEMPLATE`: Template for container definition with all dev tools
+  - `_generate_dockerfile()`: Writes Dockerfile from template
+  - `_cleanup_on_failure()`: Removes .cj directory on build failure
+  - Generates random image names and stores configuration
+
+- **`update.py`**: Implements `cj update` - rebuilds container with latest base image
+  - `UpdateCommand` class: Manages update workflow
+  - Regenerates Dockerfile from template (user customizations not preserved)
+  - Rebuilds container with same image name
+  - Logs output to `.cj/update.log`
+
+- **`claude.py`**: Implements default `cj` command - runs Claude Code in container
+  - `ClaudeCommand` class: Manages Claude Code execution in container
+  - Handles volume mounts for workspace, credentials, and SSH keys
+  - Starts `BrowserBridge` for URL redirection
+  - Sets up SSH reverse tunnel in background thread
+  - Port forwarding: SSH (2222:22), Browser bridge reverse tunnel (9999:9999)
+  - Clean shutdown of bridge and tunnel processes
+
+- **`cli.py`**: Command-line interface and routing
+  - Routes commands to appropriate handlers (setup/update/claude)
+  - Handles exceptions and provides user-friendly error messages
 
 ### Container Integration
 
@@ -170,12 +190,13 @@ Tracked in `spec/plan.md` with checkmarks (✓):
 - ✓ Step 2: Configuration Management Module
 - ✓ Step 3: Random Name Generator
 - ✓ Step 4: Container Operations Wrapper
-- Step 5: Setup Mode Implementation (next)
-- Step 6: Update Mode Implementation
-- Step 7: Claude Mode Implementation
-- Step 8: CLI and Command Routing
-- Step 9: Integration Testing
-- Step 10: Documentation
+- ✓ Step 5: Setup Mode Implementation
+- ✓ Step 6: Update Mode Implementation
+- ✓ Step 7: Claude Mode Implementation
+- ✓ Step 8: CLI and Command Routing
+- ✓ Step 9: Integration Testing
+- ✓ Step 10: Documentation
+- ✓ Browser Redirection Feature (spec/002-browser.md)
 
 ## Testing Requirements
 
