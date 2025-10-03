@@ -301,6 +301,96 @@ class TestContainerManager:
         ]
         mock_run.assert_called_once_with(expected_cmd, check=False, capture_output=False)
 
+    @patch("cjlib.container._run_command")
+    def test_run_interactive_with_env_vars(self, mock_run):
+        """Test run_interactive with environment variables."""
+        mock_run.return_value = Mock(returncode=0)
+
+        self.manager.run_interactive(
+            image="my-image",
+            working_dir="/workspace",
+            volume_mounts=["host:container"],
+            command=["bash"],
+            env_vars=["TERM=xterm-256color", "FOO=bar"],
+        )
+
+        expected_cmd = [
+            "container",
+            "run",
+            "-it",
+            "--rm",
+            "-e",
+            "TERM=xterm-256color",
+            "-e",
+            "FOO=bar",
+            "-v",
+            "host:container",
+            "-w",
+            "/workspace",
+            "my-image",
+            "bash",
+        ]
+        mock_run.assert_called_once_with(expected_cmd, check=False, capture_output=False)
+
+    @patch("cjlib.container._run_command")
+    def test_run_interactive_without_env_vars(self, mock_run):
+        """Test run_interactive without environment variables (backwards compatibility)."""
+        mock_run.return_value = Mock(returncode=0)
+
+        self.manager.run_interactive(
+            image="my-image",
+            working_dir="/workspace",
+            volume_mounts=["host:container"],
+            command=["bash"],
+        )
+
+        # Should not include -e flags
+        expected_cmd = [
+            "container",
+            "run",
+            "-it",
+            "--rm",
+            "-v",
+            "host:container",
+            "-w",
+            "/workspace",
+            "my-image",
+            "bash",
+        ]
+        mock_run.assert_called_once_with(expected_cmd, check=False, capture_output=False)
+
+    @patch("cjlib.container._run_command")
+    def test_run_interactive_with_all_options(self, mock_run):
+        """Test run_interactive with all optional parameters."""
+        mock_run.return_value = Mock(returncode=0)
+
+        self.manager.run_interactive(
+            image="my-image",
+            working_dir="/workspace",
+            volume_mounts=["host:container"],
+            command=["bash"],
+            port_forwards=[("2222", "22")],
+            env_vars=["TERM=xterm-256color"],
+        )
+
+        expected_cmd = [
+            "container",
+            "run",
+            "-it",
+            "--rm",
+            "-p",
+            "2222:22",
+            "-e",
+            "TERM=xterm-256color",
+            "-v",
+            "host:container",
+            "-w",
+            "/workspace",
+            "my-image",
+            "bash",
+        ]
+        mock_run.assert_called_once_with(expected_cmd, check=False, capture_output=False)
+
     @patch("subprocess.Popen")
     def test_setup_reverse_tunnel_success(self, mock_popen):
         """Test successful reverse tunnel setup."""

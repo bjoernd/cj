@@ -166,6 +166,11 @@ class ClaudeCommand:
             # Setup SSH tunnel in background thread
             tunnel_process, tunnel_thread = self._setup_ssh_tunnel(ssh_private_key)
 
+            # Prepare environment variables (preserve TERM for color support)
+            env_vars = []
+            term_value = os.environ.get("TERM", "xterm-256color")
+            env_vars.append(f"TERM={term_value}")
+
             # Run container interactively with port forwarding
             exit_code = self.container_mgr.run_interactive(
                 image=image_name,
@@ -173,6 +178,7 @@ class ClaudeCommand:
                 volume_mounts=volume_mounts,
                 command=["claude"],
                 port_forwards=[(str(SSH_FORWARD_PORT), "22")],
+                env_vars=env_vars,
             )
 
             return exit_code

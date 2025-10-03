@@ -184,6 +184,7 @@ class ContainerManager:
         volume_mounts: List[str],
         command: List[str],
         port_forwards: List[tuple] = None,
+        env_vars: List[str] = None,
     ) -> int:
         """Run a container interactively.
 
@@ -193,6 +194,7 @@ class ContainerManager:
             volume_mounts: List of volume mount strings (format: "host:container")
             command: Command to execute in the container
             port_forwards: Optional list of (host_port, container_port) tuples for port forwarding
+            env_vars: Optional list of environment variable strings (format: "KEY=value")
 
         Returns:
             int: Exit code from the container
@@ -207,6 +209,11 @@ class ContainerManager:
         if port_forwards:
             for host_port, container_port in port_forwards:
                 cmd.extend(["-p", f"{host_port}:{container_port}"])
+
+        # Add environment variables
+        if env_vars:
+            for env_var in env_vars:
+                cmd.extend(["-e", env_var])
 
         # Add volume mounts
         for mount in volume_mounts:
