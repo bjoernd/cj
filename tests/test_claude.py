@@ -1,7 +1,12 @@
 """Tests for Claude mode implementation."""
 
 from unittest.mock import Mock, patch
-from cjlib.claude import ClaudeCommand, CONTAINER_CLAUDE_DIR, CONTAINER_WORKSPACE
+from cjlib.claude import (
+    ClaudeCommand,
+    CONTAINER_CLAUDE_DIR,
+    CONTAINER_WORKSPACE,
+    CONTAINER_SSH_DIR,
+)
 from cjlib.config import Config, ConfigNotFoundError, ImageNameNotFoundError
 from cjlib.container import ContainerManager
 from cjlib.setup import SetupCommand
@@ -11,6 +16,7 @@ def test_get_volume_mounts():
     """Test volume mount construction."""
     config = Mock(spec=Config)
     config.get_claude_dir.return_value = "/test/path/.cj/claude"
+    config.get_ssh_dir.return_value = "/test/path/.cj/ssh"
 
     container_mgr = Mock(spec=ContainerManager)
     setup_cmd = Mock(spec=SetupCommand)
@@ -21,9 +27,10 @@ def test_get_volume_mounts():
         mounts = claude_cmd._get_volume_mounts()
 
     # Verify correct volume mounts
-    assert len(mounts) == 2
+    assert len(mounts) == 3
     assert f"/test/path:{CONTAINER_WORKSPACE}" in mounts
     assert f"/test/path/.cj/claude:{CONTAINER_CLAUDE_DIR}" in mounts
+    assert f"/test/path/.cj/ssh:{CONTAINER_SSH_DIR}" in mounts
 
 
 def test_rebuild_image_success():
@@ -64,6 +71,9 @@ def test_run_success():
     config.exists.return_value = True
     config.read_image_name.return_value = "cj-test-image"
     config.get_claude_dir.return_value = "/test/.cj/claude"
+    config.get_ssh_dir.return_value = "/test/.cj/ssh"
+    config.get_ssh_private_key_path.return_value = "/test/.cj/ssh/id_rsa"
+    config.get_ssh_public_key_path.return_value = "/test/.cj/ssh/id_rsa.pub"
 
     container_mgr = Mock(spec=ContainerManager)
     container_mgr.image_exists.return_value = True
@@ -73,7 +83,12 @@ def test_run_success():
 
     claude_cmd = ClaudeCommand(config, container_mgr, setup_cmd)
 
-    with patch("os.getcwd", return_value="/test"):
+    with (
+        patch("os.getcwd", return_value="/test"),
+        patch("cjlib.claude.setup_ssh_keys"),
+        patch("cjlib.claude.BrowserBridge"),
+        patch("cjlib.claude.threading.Thread"),
+    ):
         result = claude_cmd.run()
 
     # Verify success
@@ -207,6 +222,9 @@ def test_run_container_exit_code_propagated():
     config.exists.return_value = True
     config.read_image_name.return_value = "cj-test-image"
     config.get_claude_dir.return_value = "/test/.cj/claude"
+    config.get_ssh_dir.return_value = "/test/.cj/ssh"
+    config.get_ssh_private_key_path.return_value = "/test/.cj/ssh/id_rsa"
+    config.get_ssh_public_key_path.return_value = "/test/.cj/ssh/id_rsa.pub"
 
     container_mgr = Mock(spec=ContainerManager)
     container_mgr.image_exists.return_value = True
@@ -216,7 +234,12 @@ def test_run_container_exit_code_propagated():
 
     claude_cmd = ClaudeCommand(config, container_mgr, setup_cmd)
 
-    with patch("os.getcwd", return_value="/test"):
+    with (
+        patch("os.getcwd", return_value="/test"),
+        patch("cjlib.claude.setup_ssh_keys"),
+        patch("cjlib.claude.BrowserBridge"),
+        patch("cjlib.claude.threading.Thread"),
+    ):
         result = claude_cmd.run()
 
     # Verify exit code propagated
@@ -229,6 +252,9 @@ def test_run_interactive_called_with_correct_params():
     config.exists.return_value = True
     config.read_image_name.return_value = "cj-test-image"
     config.get_claude_dir.return_value = "/test/.cj/claude"
+    config.get_ssh_dir.return_value = "/test/.cj/ssh"
+    config.get_ssh_private_key_path.return_value = "/test/.cj/ssh/id_rsa"
+    config.get_ssh_public_key_path.return_value = "/test/.cj/ssh/id_rsa.pub"
 
     container_mgr = Mock(spec=ContainerManager)
     container_mgr.image_exists.return_value = True
@@ -238,7 +264,12 @@ def test_run_interactive_called_with_correct_params():
 
     claude_cmd = ClaudeCommand(config, container_mgr, setup_cmd)
 
-    with patch("os.getcwd", return_value="/test"):
+    with (
+        patch("os.getcwd", return_value="/test"),
+        patch("cjlib.claude.setup_ssh_keys"),
+        patch("cjlib.claude.BrowserBridge"),
+        patch("cjlib.claude.threading.Thread"),
+    ):
         result = claude_cmd.run()
 
     # Verify run_interactive called with correct params
@@ -246,8 +277,13 @@ def test_run_interactive_called_with_correct_params():
     container_mgr.run_interactive.assert_called_once_with(
         image="cj-test-image",
         working_dir=CONTAINER_WORKSPACE,
-        volume_mounts=[f"/test:{CONTAINER_WORKSPACE}", f"/test/.cj/claude:{CONTAINER_CLAUDE_DIR}"],
+        volume_mounts=[
+            f"/test:{CONTAINER_WORKSPACE}",
+            f"/test/.cj/claude:{CONTAINER_CLAUDE_DIR}",
+            f"/test/.cj/ssh:{CONTAINER_SSH_DIR}",
+        ],
         command=["claude"],
+        port_forwards=[("2222", "22")],
     )
 
 
@@ -257,6 +293,9 @@ def test_run_ensure_claude_dir_called():
     config.exists.return_value = True
     config.read_image_name.return_value = "cj-test-image"
     config.get_claude_dir.return_value = "/test/.cj/claude"
+    config.get_ssh_dir.return_value = "/test/.cj/ssh"
+    config.get_ssh_private_key_path.return_value = "/test/.cj/ssh/id_rsa"
+    config.get_ssh_public_key_path.return_value = "/test/.cj/ssh/id_rsa.pub"
 
     container_mgr = Mock(spec=ContainerManager)
     container_mgr.image_exists.return_value = True
@@ -266,7 +305,12 @@ def test_run_ensure_claude_dir_called():
 
     claude_cmd = ClaudeCommand(config, container_mgr, setup_cmd)
 
-    with patch("os.getcwd", return_value="/test"):
+    with (
+        patch("os.getcwd", return_value="/test"),
+        patch("cjlib.claude.setup_ssh_keys"),
+        patch("cjlib.claude.BrowserBridge"),
+        patch("cjlib.claude.threading.Thread"),
+    ):
         result = claude_cmd.run()
 
     # Verify ensure_claude_dir was called

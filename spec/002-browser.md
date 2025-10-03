@@ -348,7 +348,7 @@ Update:
 4. ✓ Create browser wrapper script template
 5. ✓ Implement `BrowserBridge` class (`browser_bridge.py`)
 6. ✓ Update `ContainerManager` for port forwarding and reverse tunnel
-7. Integrate into main flow (setup/claude commands)
+7. ✓ Integrate into main flow (setup/claude commands)
 8. Add error handling and logging
 9. Write unit tests
 10. Write integration tests
