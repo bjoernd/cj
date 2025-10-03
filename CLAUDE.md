@@ -64,6 +64,9 @@ Claude Code credentials persist across container runs via volume mounts:
 
 ### Running Tests
 
+**IMPORTANT**: Before committing changes to git, always run testing and fix all
+issues, including those that seem unrelated to your changes.
+
 ```bash
 # Activate virtual environment (if not using ./cj script)
 source .cj/venv/bin/activate
