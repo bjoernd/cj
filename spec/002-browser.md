@@ -345,8 +345,8 @@ Update:
 1. ✓ Create this plan (spec/002-browser.md)
 2. ✓ Add SSH server configuration to Dockerfile template
 3. ✓ Implement SSH key management (`container.py`, `config.py`)
-4. Create browser wrapper script template
-5. Implement `BrowserBridge` class (`browser_bridge.py`)
+4. ✓ Create browser wrapper script template
+5. ✓ Implement `BrowserBridge` class (`browser_bridge.py`)
 6. Update `ContainerManager` for port forwarding and reverse tunnel
 7. Integrate into main flow (setup/claude commands)
 8. Add error handling and logging
