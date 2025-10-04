@@ -57,7 +57,9 @@ The `cj` command is a bash script that manages its own Python virtual environmen
 
 - **`claude.py`**: Implements default `cj` command - runs Claude Code in container
   - `ClaudeCommand` class: Manages Claude Code execution in container
-  - Handles volume mounts for workspace and credentials
+  - Handles volume mounts for workspace, credentials, and config
+  - Mounts `.cj` directory as read-only to prevent tampering with venv, Dockerfile, etc.
+  - Keeps `.cj/claude` writable via separate mount to `/root/.claude`
   - Passes TERM environment variable to container for proper color support
 
 - **`cli.py`**: Command-line interface and routing
@@ -77,6 +79,36 @@ Claude Code credentials persist across container runs via volume mounts:
 - `.cj/claude/` on host → `/root/.claude` in container
 - First run creates credentials in container (stored on host)
 - Subsequent runs automatically have credentials available
+
+### Security Strategy
+
+CJ's primary security goal is to prevent malicious LLM agents from accessing data outside the project directory.
+
+**Security model:**
+- **Filesystem isolation**: Only the current working directory is mounted; parent directories and other files on the host are inaccessible
+- **Workspace access**: Project files are intentionally read-write to allow Claude Code to function normally
+- **Network access**: Container has unrestricted network access (intentional - required for package downloads, API calls, etc.)
+- **Config directory protection**: `.cj` directory is mounted as read-only to prevent:
+  - Tampering with Python virtual environment (`.cj/venv`)
+  - Modifying Dockerfile or container configuration
+  - Altering image name or build logs
+- **Credential separation**: `.cj/claude` is separately mounted to `/root/.claude` as read-write
+- **Minimal attack surface**: No SSH server, network listeners, or unnecessary services in container
+
+**What CJ protects against:**
+- Reading files outside the project directory (e.g., `~/.ssh/`, `~/Documents/`)
+- Accessing other projects or system files
+- Modifying CJ's own configuration or virtual environment from within container
+
+**What CJ does NOT protect against:**
+- Network-based attacks or data exfiltration (network is unrestricted)
+- Malicious modifications to project files (workspace is intentionally writable)
+- Resource exhaustion (no CPU/memory limits currently enforced)
+
+Volume mount strategy:
+1. Workspace (`/workspace`): read-write access to project files
+2. Config directory (`/workspace/.cj`): read-only overlay to protect configuration
+3. Credentials (`/root/.claude`): read-write access outside workspace path
 
 ## Development Commands
 

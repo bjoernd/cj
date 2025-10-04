@@ -1,6 +1,8 @@
 # CJ (Claude Jailer)
 
-CJ is a macOS application that runs Claude Code within an isolated container environment. It provides a sandboxed development environment with pre-installed development tools, ensuring consistent and reproducible builds.
+CJ is a macOS application that runs Claude Code within an isolated container environment. It provides a sandboxed development environment with pre-installed development tools.
+
+The main benefit is that CJ prevents malicious LLM agents to extract data from outside your project working directory. The project directory itself is intentionally read/writable. The container intentionally also has unrestricted network access.
 
 ## Features
 
@@ -8,27 +10,26 @@ CJ is a macOS application that runs Claude Code within an isolated container env
 - **Pre-installed Tools**: Includes GCC, Clang, Python, Rust, Node.js, vim, neovim, zsh, and oh-my-zsh
 - **Self-Bootstrapping**: No manual installation required - the `cj` script manages its own environment
 - **Credential Persistence**: Claude Code credentials are automatically preserved across container runs
-- **Easy Updates**: Simple command to rebuild containers with the latest base image
 
 ## Prerequisites
 
-- macOS with the `container` command installed
+- macOS 26 (Tahoe) or later with the `container` command installed
 - Python 3.9 or higher
 - Node.js (for Claude Code)
 
 ## Installation
 
-No installation required! Simply clone the repository and run the `cj` script:
+No installation required! Simply clone the repository and run the `cj` script from within your project directory:
 
 ```bash
 git clone <repository-url>
-cd cj
-./cj setup
+cd <my-claude-project-directory>
+<path-to-cj>/cj setup
 ```
 
 On first run, `cj` will automatically:
 1. Create a Python virtual environment in `.cj/venv`
-2. Install all necessary dependencies
+2. Install all necessary dependencies to run cj later
 3. Set up the project structure
 
 ## Usage
@@ -38,13 +39,13 @@ On first run, `cj` will automatically:
 Before using CJ, you need to create the container image:
 
 ```bash
-./cj setup
+<path-to-cj>/cj setup
 ```
 
 This command:
 - Creates a `.cj` directory in your project
 - Generates a Dockerfile with all development tools
-- Builds a container image with a random name (e.g., `cj-happy-turtle`)
+- Builds a container image
 - Stores the configuration for future use
 
 ### Running Claude Code
@@ -52,7 +53,7 @@ This command:
 Once setup is complete, simply run:
 
 ```bash
-./cj
+<path-to-cj>/cj
 ```
 
 This launches Claude Code inside the container with:

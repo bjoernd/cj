@@ -30,14 +30,16 @@ class ClaudeCommand:
         """Get list of volume mount strings for container.
 
         Returns:
-            List of volume mount strings in format "host:container"
+            List of volume mount strings in format "host:container" or "host:container:mode"
         """
         cwd = os.getcwd()
         claude_dir = self.config.get_claude_dir()
+        config_dir = self.config.get_config_dir()
 
         return [
             f"{cwd}:{CONTAINER_WORKSPACE}",
-            f"{claude_dir}:{CONTAINER_CLAUDE_DIR}",
+            f"{config_dir}:{CONTAINER_WORKSPACE}/.cj:ro",  # Make .cj read-only
+            f"{claude_dir}:{CONTAINER_CLAUDE_DIR}",  # Keep credentials writable
         ]
 
     def _rebuild_image(self) -> None:

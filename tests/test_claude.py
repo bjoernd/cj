@@ -15,6 +15,7 @@ def test_get_volume_mounts():
     """Test volume mount construction."""
     config = Mock(spec=Config)
     config.get_claude_dir.return_value = "/test/path/.cj/claude"
+    config.get_config_dir.return_value = "/test/path/.cj"
 
     container_mgr = Mock(spec=ContainerManager)
     setup_cmd = Mock(spec=SetupCommand)
@@ -25,8 +26,9 @@ def test_get_volume_mounts():
         mounts = claude_cmd._get_volume_mounts()
 
     # Verify correct volume mounts
-    assert len(mounts) == 2
+    assert len(mounts) == 3
     assert f"/test/path:{CONTAINER_WORKSPACE}" in mounts
+    assert f"/test/path/.cj:{CONTAINER_WORKSPACE}/.cj:ro" in mounts
     assert f"/test/path/.cj/claude:{CONTAINER_CLAUDE_DIR}" in mounts
 
 
@@ -233,6 +235,7 @@ def test_run_interactive_called_with_correct_params():
     config.exists.return_value = True
     config.read_image_name.return_value = "cj-test-image"
     config.get_claude_dir.return_value = "/test/.cj/claude"
+    config.get_config_dir.return_value = "/test/.cj"
 
     container_mgr = Mock(spec=ContainerManager)
     container_mgr.image_exists.return_value = True
@@ -255,6 +258,7 @@ def test_run_interactive_called_with_correct_params():
         working_dir=CONTAINER_WORKSPACE,
         volume_mounts=[
             f"/test:{CONTAINER_WORKSPACE}",
+            f"/test/.cj:{CONTAINER_WORKSPACE}/.cj:ro",
             f"/test/.cj/claude:{CONTAINER_CLAUDE_DIR}",
         ],
         command=["claude"],
