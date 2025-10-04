@@ -33,11 +33,6 @@ def test_dockerfile_template_content():
     assert "nodejs" in DOCKERFILE_TEMPLATE
     assert "oh-my-zsh" in DOCKERFILE_TEMPLATE
     assert "@anthropic-ai/claude-code" in DOCKERFILE_TEMPLATE
-    assert "openssh-server" in DOCKERFILE_TEMPLATE
-    assert "netcat-openbsd" in DOCKERFILE_TEMPLATE
-    assert "init-ssh.sh" in DOCKERFILE_TEMPLATE
-    assert "/usr/local/bin/open" in DOCKERFILE_TEMPLATE
-    assert "BROWSER=/usr/local/bin/open" in DOCKERFILE_TEMPLATE
     assert "WORKDIR /workspace" in DOCKERFILE_TEMPLATE
 
 

@@ -11,9 +11,6 @@ from cjlib.config import (
     DOCKERFILE_NAME,
     CLAUDE_DIR,
     VENV_DIR,
-    SSH_DIR,
-    SSH_PRIVATE_KEY,
-    SSH_PUBLIC_KEY,
 )
 
 
@@ -168,41 +165,3 @@ class TestConfig:
         (tmp_path / CONFIG_DIR / IMAGE_NAME_FILE).write_text("  cj-test-name\n  ")
 
         assert config.read_image_name() == "cj-test-name"
-
-    def test_get_ssh_dir(self, tmp_path):
-        """Test get_ssh_dir returns correct path."""
-        config = Config(str(tmp_path))
-        expected = str(tmp_path / CONFIG_DIR / SSH_DIR)
-        assert config.get_ssh_dir() == expected
-
-    def test_ensure_ssh_dir_creates_directory(self, tmp_path):
-        """Test ensure_ssh_dir creates directory."""
-        config = Config(str(tmp_path))
-        ssh_path = tmp_path / CONFIG_DIR / SSH_DIR
-
-        config.ensure_ssh_dir()
-
-        assert ssh_path.exists()
-        assert ssh_path.is_dir()
-
-    def test_ensure_ssh_dir_is_idempotent(self, tmp_path):
-        """Test ensure_ssh_dir can be called multiple times."""
-        config = Config(str(tmp_path))
-        ssh_path = tmp_path / CONFIG_DIR / SSH_DIR
-
-        config.ensure_ssh_dir()
-        config.ensure_ssh_dir()
-
-        assert ssh_path.exists()
-
-    def test_get_ssh_private_key_path(self, tmp_path):
-        """Test get_ssh_private_key_path returns correct path."""
-        config = Config(str(tmp_path))
-        expected = str(tmp_path / CONFIG_DIR / SSH_DIR / SSH_PRIVATE_KEY)
-        assert config.get_ssh_private_key_path() == expected
-
-    def test_get_ssh_public_key_path(self, tmp_path):
-        """Test get_ssh_public_key_path returns correct path."""
-        config = Config(str(tmp_path))
-        expected = str(tmp_path / CONFIG_DIR / SSH_DIR / SSH_PUBLIC_KEY)
-        assert config.get_ssh_public_key_path() == expected

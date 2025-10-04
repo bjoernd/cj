@@ -1,9 +1,7 @@
 """Container operations wrapper for macOS container command."""
 
-import os
 import subprocess
 import shutil
-from pathlib import Path
 from typing import List
 
 
@@ -26,24 +24,6 @@ class ContainerRunError(Exception):
     pass
 
 
-class SSHKeyError(Exception):
-    """Raised when SSH key generation or setup fails."""
-
-    pass
-
-
-class SSHTunnelError(Exception):
-    """Raised when SSH tunnel establishment fails."""
-
-    pass
-
-
-class SSHConnectionError(Exception):
-    """Raised when SSH connection to container fails."""
-
-    pass
-
-
 def _run_command(
     args: List[str], check: bool = True, capture_output: bool = True
 ) -> subprocess.CompletedProcess:
@@ -58,59 +38,6 @@ def _run_command(
         CompletedProcess object containing the result
     """
     return subprocess.run(args, check=check, capture_output=capture_output, text=True)
-
-
-def setup_ssh_keys(ssh_dir: str, private_key_path: str, public_key_path: str) -> None:
-    """Generate SSH key pair for host if it doesn't exist.
-
-    Args:
-        ssh_dir: Path to SSH directory (.cj/ssh)
-        private_key_path: Path where private key should be stored
-        public_key_path: Path where public key should be stored
-
-    Raises:
-        SSHKeyError: If SSH key generation fails
-    """
-    # Check if keys already exist
-    private_key = Path(private_key_path)
-    public_key = Path(public_key_path)
-
-    if private_key.exists() and public_key.exists():
-        # Keys already exist, nothing to do
-        return
-
-    # Ensure SSH directory exists
-    ssh_path = Path(ssh_dir)
-    ssh_path.mkdir(parents=True, exist_ok=True)
-
-    # Generate SSH key pair
-    try:
-        _run_command(
-            [
-                "ssh-keygen",
-                "-t",
-                "rsa",
-                "-b",
-                "4096",
-                "-f",
-                private_key_path,
-                "-N",
-                "",
-                "-C",
-                "cj-container-access",
-            ]
-        )
-    except subprocess.CalledProcessError as e:
-        error_msg = f"Failed to generate SSH keys: {e}"
-        if e.stderr:
-            error_msg += f"\n{e.stderr}"
-        raise SSHKeyError(error_msg) from e
-
-    # Set proper permissions on private key (600)
-    try:
-        os.chmod(private_key_path, 0o600)
-    except OSError as e:
-        raise SSHKeyError(f"Failed to set permissions on private key: {e}") from e
 
 
 class ContainerManager:
@@ -248,55 +175,3 @@ class ContainerManager:
         except Exception:
             # Ignore errors (e.g., image doesn't exist)
             pass
-
-    def setup_reverse_tunnel(
-        self,
-        ssh_private_key_path: str,
-        ssh_port: int = 2222,
-        forward_port: int = 9999,
-    ) -> subprocess.Popen:
-        """Establish SSH reverse tunnel to container.
-
-        Args:
-            ssh_private_key_path: Path to SSH private key for authentication
-            ssh_port: Port on host where container's SSH is forwarded (default: 2222)
-            forward_port: Port to forward from container to host (default: 9999)
-
-        Returns:
-            subprocess.Popen: Process object for the SSH tunnel
-
-        Raises:
-            SSHTunnelError: If tunnel establishment fails
-        """
-        # Build SSH command for reverse tunnel
-        # -R forward_port:localhost:forward_port = reverse tunnel
-        # -N = no command execution
-        # -o StrictHostKeyChecking=no = don't prompt for host key verification
-        # -o UserKnownHostsFile=/dev/null = don't save host key
-        cmd = [
-            "ssh",
-            "-R",
-            f"{forward_port}:localhost:{forward_port}",
-            "-p",
-            str(ssh_port),
-            "-i",
-            ssh_private_key_path,
-            "-N",
-            "-o",
-            "StrictHostKeyChecking=no",
-            "-o",
-            "UserKnownHostsFile=/dev/null",
-            "root@localhost",
-        ]
-
-        try:
-            # Start SSH tunnel in background
-            process = subprocess.Popen(
-                cmd,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.PIPE,
-                text=True,
-            )
-            return process
-        except Exception as e:
-            raise SSHTunnelError(f"Failed to establish SSH tunnel: {e}") from e

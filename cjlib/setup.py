@@ -17,8 +17,6 @@ RUN apt-get update && apt-get install -y \\
     zsh \\
     curl \\
     git \\
-    openssh-server \\
-    netcat-openbsd \\
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python development tools via pip
@@ -49,35 +47,6 @@ RUN npm install -g @anthropic-ai/claude-code
 
 # Create symlink for .claude.json to persist state in mounted .claude directory
 RUN ln -s /root/.claude/.claude.json /root/.claude.json
-
-# Configure SSH server
-RUN mkdir -p /var/run/sshd /root/.ssh && \\
-    chmod 700 /root/.ssh && \\
-    sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin prohibit-password/' \\
-        /etc/ssh/sshd_config && \\
-    sed -i 's/#PubkeyAuthentication yes/PubkeyAuthentication yes/' /etc/ssh/sshd_config
-
-# Create SSH initialization script
-RUN echo '#!/bin/bash\\n\\
-mkdir -p /root/.ssh\\n\\
-if [ -f /tmp/host-ssh/id_rsa.pub ]; then\\n\\
-  cat /tmp/host-ssh/id_rsa.pub > /root/.ssh/authorized_keys\\n\\
-  chmod 600 /root/.ssh/authorized_keys\\n\\
-  chmod 700 /root/.ssh\\n\\
-fi\\n\\
-exec /usr/sbin/sshd -D' > /usr/local/bin/init-ssh.sh && \\
-    chmod +x /usr/local/bin/init-ssh.sh
-
-# Create browser wrapper script that forwards URLs to host
-RUN echo '#!/bin/bash\\n\\
-PORT=9999\\n\\
-URL="$*"\\n\\
-echo "$URL" | nc -w 1 localhost $PORT 2>/dev/null\\n\\
-exit 0' > /usr/local/bin/open && \\
-    chmod +x /usr/local/bin/open
-
-# Set BROWSER environment variable to use wrapper
-ENV BROWSER=/usr/local/bin/open
 
 # Set working directory
 WORKDIR /workspace

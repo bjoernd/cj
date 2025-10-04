@@ -27,9 +27,7 @@ The `cj` command is a bash script that manages its own Python virtual environmen
 - **`config.py`**: Manages `.cj` directory structure, image names, Dockerfile paths
   - Custom exceptions: `ConfigExistsError`, `ConfigNotFoundError`, `ImageNameNotFoundError`
   - Handles credential persistence in `.cj/claude/`
-  - Manages SSH keys in `.cj/ssh/` for browser redirection
-  - SSH-related methods: `get_ssh_dir()`, `ensure_ssh_dir()`, `get_ssh_private_key_path()`, `get_ssh_public_key_path()`
-  - Constants: `SSH_DIR`, `SSH_PRIVATE_KEY`, `SSH_PUBLIC_KEY`, `BROWSER_BRIDGE_PORT`
+  - Constants: `CONFIG_DIR`, `IMAGE_NAME_FILE`, `DOCKERFILE_NAME`, `CLAUDE_DIR`, `VENV_DIR`
 
 - **`namegen.py`**: Generates random names like `cj-happy-turtle` for container images
   - `generate_name()`: Returns randomly generated name in format `cj-{adjective}-{noun}`
@@ -40,22 +38,9 @@ The `cj` command is a bash script that manages its own Python virtual environmen
   - `check_container_available()`: Checks if container command exists
   - `build_image()`: Builds container image from Dockerfile
   - `image_exists()`: Checks if image exists in local registry
-  - `run_interactive()`: Runs container interactively with volume mounts and port forwarding
+  - `run_interactive()`: Runs container interactively with volume mounts, port forwarding, and environment variables
   - `remove_image()`: Removes container image
-  - `setup_reverse_tunnel()`: Establishes SSH reverse tunnel from container to host
-  - `setup_ssh_keys()`: Generates RSA key pair for SSH authentication
-  - Custom exceptions: `ContainerNotAvailableError`, `ContainerBuildError`, `ContainerRunError`, `SSHKeyError`, `SSHTunnelError`, `SSHConnectionError`
-
-- **`browser_bridge.py`**: Host-side URL listener for browser redirection from container
-  - `BrowserBridge` class: Socket server that receives URLs from container and opens them on host
-  - Listens on localhost:9999 for incoming URLs from container
-  - Translates `file://` URLs from container paths to host paths using path mappings
-  - Passes through HTTP/HTTPS URLs unchanged
-  - `_translate_url()`: Converts container file:// paths to host paths
-  - `_open_url()`: Opens URLs using macOS `open` command
-  - Path mapping format: List of (container_path, host_path) tuples
-  - First matching path mapping wins (prefix matching)
-  - Logs warnings for unmapped file:// paths
+  - Custom exceptions: `ContainerNotAvailableError`, `ContainerBuildError`, `ContainerRunError`
 
 - **`setup.py`**: Implements `cj setup` - creates Dockerfile and builds container
   - `SetupCommand` class: Manages setup workflow
@@ -72,11 +57,8 @@ The `cj` command is a bash script that manages its own Python virtual environmen
 
 - **`claude.py`**: Implements default `cj` command - runs Claude Code in container
   - `ClaudeCommand` class: Manages Claude Code execution in container
-  - Handles volume mounts for workspace, credentials, and SSH keys
-  - Starts `BrowserBridge` for URL redirection
-  - Sets up SSH reverse tunnel in background thread
-  - Port forwarding: SSH (2222:22), Browser bridge reverse tunnel (9999:9999)
-  - Clean shutdown of bridge and tunnel processes
+  - Handles volume mounts for workspace and credentials
+  - Passes TERM environment variable to container for proper color support
 
 - **`cli.py`**: Command-line interface and routing
   - Routes commands to appropriate handlers (setup/update/claude)
@@ -95,36 +77,6 @@ Claude Code credentials persist across container runs via volume mounts:
 - `.cj/claude/` on host → `/root/.claude` in container
 - First run creates credentials in container (stored on host)
 - Subsequent runs automatically have credentials available
-
-### Browser Redirection Strategy
-
-CJ enables URLs opened inside the container to open on the host browser:
-
-**Architecture:**
-1. Container has SSH server and browser wrapper script at `/usr/local/bin/open`
-2. Host generates SSH keys in `.cj/ssh/` and mounts them to container
-3. Host starts `BrowserBridge` listener on port 9999
-4. Host establishes SSH reverse tunnel: container:9999 → host:9999
-5. Container's `BROWSER` environment variable points to wrapper script
-6. When URLs are opened in container, wrapper sends them to localhost:9999
-7. Host's `BrowserBridge` receives URLs, translates paths, and opens them
-
-**URL Translation:**
-- HTTP/HTTPS URLs: Pass through unchanged
-- `file://` URLs: Container paths translated to host paths using volume mount mappings
-- Example: `file:///workspace/out.html` → `file:///Users/user/project/out.html`
-- Path mappings derived from volume mounts (container_path → host_path)
-- First matching prefix wins
-
-**Port Forwarding:**
-- Container SSH (port 22) → Host port 2222
-- SSH reverse tunnel: Container port 9999 → Host port 9999
-
-**Error Handling:**
-- SSH key generation failures: Warning logged, browser redirection disabled
-- Tunnel establishment failures: Warning logged, browser redirection disabled
-- Unmapped file:// paths: Warning logged, URL opened as-is (likely fails)
-- Claude Code continues to work normally even if browser redirection fails
 
 ## Development Commands
 
@@ -196,7 +148,6 @@ Tracked in `spec/plan.md` with checkmarks (✓):
 - ✓ Step 8: CLI and Command Routing
 - ✓ Step 9: Integration Testing
 - ✓ Step 10: Documentation
-- ✓ Browser Redirection Feature (spec/002-browser.md)
 
 ## Testing Requirements
 

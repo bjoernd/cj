@@ -10,10 +10,6 @@ IMAGE_NAME_FILE = "image-name"
 DOCKERFILE_NAME = "Dockerfile"
 CLAUDE_DIR = "claude"
 VENV_DIR = "venv"
-SSH_DIR = "ssh"
-SSH_PRIVATE_KEY = "id_rsa"
-SSH_PUBLIC_KEY = "id_rsa.pub"
-BROWSER_BRIDGE_PORT = 9999
 
 
 # Custom exceptions
@@ -135,38 +131,6 @@ class Config:
             Absolute path to venv directory
         """
         return str(self.base_dir / CONFIG_DIR / VENV_DIR)
-
-    def get_ssh_dir(self) -> str:
-        """Return path to .cj/ssh directory.
-
-        Returns:
-            Absolute path to ssh directory
-        """
-        return str(self.base_dir / CONFIG_DIR / SSH_DIR)
-
-    def ensure_ssh_dir(self) -> None:
-        """Create .cj/ssh directory if it doesn't exist.
-
-        This method is idempotent - it won't error if directory already exists.
-        """
-        ssh_path = self.base_dir / CONFIG_DIR / SSH_DIR
-        ssh_path.mkdir(parents=True, exist_ok=True)
-
-    def get_ssh_private_key_path(self) -> str:
-        """Return path to SSH private key.
-
-        Returns:
-            Absolute path to SSH private key
-        """
-        return str(self.base_dir / CONFIG_DIR / SSH_DIR / SSH_PRIVATE_KEY)
-
-    def get_ssh_public_key_path(self) -> str:
-        """Return path to SSH public key.
-
-        Returns:
-            Absolute path to SSH public key
-        """
-        return str(self.base_dir / CONFIG_DIR / SSH_DIR / SSH_PUBLIC_KEY)
 
     def cleanup(self) -> None:
         """Remove .cj directory and all its contents (including venv).
