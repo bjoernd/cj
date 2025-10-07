@@ -45,9 +45,12 @@ The `cj` command is a bash script that manages its own Python virtual environmen
 - **`setup.py`**: Implements `cj setup` - creates Dockerfile and builds container
   - `SetupCommand` class: Manages setup workflow
   - `DOCKERFILE_TEMPLATE`: Template for container definition with all dev tools
+  - `CLAUDE_MD_TEMPLATE`: Template for default project CLAUDE.md with coding guidelines
   - `_generate_dockerfile()`: Writes Dockerfile from template
+  - `_generate_claude_md()`: Writes default CLAUDE.md from template (only if file doesn't exist)
   - `_cleanup_on_failure()`: Removes .cj directory on build failure
   - Generates random image names and stores configuration
+  - Creates default CLAUDE.md in project root during setup (if not already present)
 
 - **`update.py`**: Implements `cj update` - rebuilds container with latest base image
   - `UpdateCommand` class: Manages update workflow

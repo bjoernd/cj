@@ -1,7 +1,7 @@
 """Tests for setup mode implementation."""
 
 from unittest.mock import Mock, patch
-from cjlib.setup import SetupCommand, DOCKERFILE_TEMPLATE
+from cjlib.setup import SetupCommand, DOCKERFILE_TEMPLATE, CLAUDE_MD_TEMPLATE
 from cjlib.config import Config
 from cjlib.container import ContainerManager
 
@@ -34,6 +34,35 @@ def test_dockerfile_template_content():
     assert "oh-my-zsh" in DOCKERFILE_TEMPLATE
     assert "@anthropic-ai/claude-code" in DOCKERFILE_TEMPLATE
     assert "WORKDIR /workspace" in DOCKERFILE_TEMPLATE
+
+
+def test_generate_claude_md(tmp_path):
+    """Test CLAUDE.md generation."""
+    config = Mock(spec=Config)
+    container_mgr = Mock(spec=ContainerManager)
+    setup_cmd = SetupCommand(config, container_mgr)
+
+    claude_md_path = tmp_path / "CLAUDE.md"
+    setup_cmd._generate_claude_md(str(claude_md_path))
+
+    # Verify file was created with correct content
+    assert claude_md_path.exists()
+    content = claude_md_path.read_text()
+    assert content == CLAUDE_MD_TEMPLATE
+
+
+def test_claude_md_template_content():
+    """Test that CLAUDE.md template includes all required sections."""
+    assert "## Modifying Software Projects" in CLAUDE_MD_TEMPLATE
+    assert "MUST always validate that a project still builds" in CLAUDE_MD_TEMPLATE
+    assert "MUST always run linting" in CLAUDE_MD_TEMPLATE
+    assert "MUST always run available tests" in CLAUDE_MD_TEMPLATE
+    assert "## Secure Coding" in CLAUDE_MD_TEMPLATE
+    assert "MUST NEVER implement logging of secrets" in CLAUDE_MD_TEMPLATE
+    assert "## Documentation, README, Git commit messages" in CLAUDE_MD_TEMPLATE
+    assert "## Rust" in CLAUDE_MD_TEMPLATE
+    assert "cargo fmt" in CLAUDE_MD_TEMPLATE
+    assert "cargo clippy" in CLAUDE_MD_TEMPLATE
 
 
 def test_cleanup_on_failure():
@@ -243,3 +272,57 @@ def test_run_dockerfile_written_before_build(tmp_path):
     # Verify Dockerfile exists when build is called
     assert result == 0
     assert dockerfile_exists_during_build
+
+
+def test_run_creates_claude_md(tmp_path):
+    """Test that setup creates CLAUDE.md if it doesn't exist."""
+    config_dir = tmp_path / ".cj"
+    claude_md_path = tmp_path / "CLAUDE.md"
+
+    config = Mock(spec=Config)
+    config.exists.return_value = False
+    config.get_config_dir.return_value = str(config_dir)
+    config.get_dockerfile_path.return_value = str(config_dir / "Dockerfile")
+
+    container_mgr = Mock(spec=ContainerManager)
+    container_mgr.check_container_available.return_value = True
+
+    setup_cmd = SetupCommand(config, container_mgr)
+
+    with patch("cjlib.setup.generate_name", return_value="cj-test-image"):
+        result = setup_cmd.run()
+
+    # Verify CLAUDE.md was created
+    assert result == 0
+    assert claude_md_path.exists()
+    content = claude_md_path.read_text()
+    assert content == CLAUDE_MD_TEMPLATE
+
+
+def test_run_does_not_overwrite_existing_claude_md(tmp_path):
+    """Test that setup does not overwrite existing CLAUDE.md."""
+    config_dir = tmp_path / ".cj"
+    claude_md_path = tmp_path / "CLAUDE.md"
+
+    # Create existing CLAUDE.md with custom content
+    existing_content = "# Custom CLAUDE.md\nThis should not be overwritten."
+    claude_md_path.write_text(existing_content)
+
+    config = Mock(spec=Config)
+    config.exists.return_value = False
+    config.get_config_dir.return_value = str(config_dir)
+    config.get_dockerfile_path.return_value = str(config_dir / "Dockerfile")
+
+    container_mgr = Mock(spec=ContainerManager)
+    container_mgr.check_container_available.return_value = True
+
+    setup_cmd = SetupCommand(config, container_mgr)
+
+    with patch("cjlib.setup.generate_name", return_value="cj-test-image"):
+        result = setup_cmd.run()
+
+    # Verify CLAUDE.md was not overwritten
+    assert result == 0
+    assert claude_md_path.exists()
+    content = claude_md_path.read_text()
+    assert content == existing_content
