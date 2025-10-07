@@ -240,120 +240,58 @@ class TestContainerManager:
             ["container", "image", "delete", "non-existent-image"], check=False
         )
 
+    @pytest.mark.parametrize(
+        "port_forwards,expected_flags",
+        [
+            ([("2222", "22"), ("8080", "80")], ["-p", "2222:22", "-p", "8080:80"]),
+            (None, []),
+        ],
+    )
     @patch("cjlib.container._run_command")
-    def test_run_interactive_with_port_forwards(self, mock_run):
-        """Test run_interactive with port forwarding."""
+    def test_run_interactive_port_forwards(self, mock_run, port_forwards, expected_flags):
+        """Test run_interactive with and without port forwarding."""
         mock_run.return_value = Mock(returncode=0)
 
-        self.manager.run_interactive(
-            image="my-image",
-            working_dir="/workspace",
-            volume_mounts=["host:container"],
-            command=["bash"],
-            port_forwards=[("2222", "22"), ("8080", "80")],
-        )
+        kwargs = {
+            "image": "my-image",
+            "working_dir": "/workspace",
+            "volume_mounts": ["host:container"],
+            "command": ["bash"],
+        }
+        if port_forwards is not None:
+            kwargs["port_forwards"] = port_forwards
 
-        expected_cmd = [
-            "container",
-            "run",
-            "-it",
-            "--rm",
-            "-p",
-            "2222:22",
-            "-p",
-            "8080:80",
-            "-v",
-            "host:container",
-            "-w",
-            "/workspace",
-            "my-image",
-            "bash",
-        ]
+        self.manager.run_interactive(**kwargs)
+
+        expected_cmd = ["container", "run", "-it", "--rm"] + expected_flags
+        expected_cmd += ["-v", "host:container", "-w", "/workspace", "my-image", "bash"]
         mock_run.assert_called_once_with(expected_cmd, check=False, capture_output=False)
 
+    @pytest.mark.parametrize(
+        "env_vars,expected_flags",
+        [
+            (["TERM=xterm-256color", "FOO=bar"], ["-e", "TERM=xterm-256color", "-e", "FOO=bar"]),
+            (None, []),
+        ],
+    )
     @patch("cjlib.container._run_command")
-    def test_run_interactive_without_port_forwards(self, mock_run):
-        """Test run_interactive without port forwarding (backwards compatibility)."""
+    def test_run_interactive_env_vars(self, mock_run, env_vars, expected_flags):
+        """Test run_interactive with and without environment variables."""
         mock_run.return_value = Mock(returncode=0)
 
-        self.manager.run_interactive(
-            image="my-image",
-            working_dir="/workspace",
-            volume_mounts=["host:container"],
-            command=["bash"],
-        )
+        kwargs = {
+            "image": "my-image",
+            "working_dir": "/workspace",
+            "volume_mounts": ["host:container"],
+            "command": ["bash"],
+        }
+        if env_vars is not None:
+            kwargs["env_vars"] = env_vars
 
-        # Should not include -p flags
-        expected_cmd = [
-            "container",
-            "run",
-            "-it",
-            "--rm",
-            "-v",
-            "host:container",
-            "-w",
-            "/workspace",
-            "my-image",
-            "bash",
-        ]
-        mock_run.assert_called_once_with(expected_cmd, check=False, capture_output=False)
+        self.manager.run_interactive(**kwargs)
 
-    @patch("cjlib.container._run_command")
-    def test_run_interactive_with_env_vars(self, mock_run):
-        """Test run_interactive with environment variables."""
-        mock_run.return_value = Mock(returncode=0)
-
-        self.manager.run_interactive(
-            image="my-image",
-            working_dir="/workspace",
-            volume_mounts=["host:container"],
-            command=["bash"],
-            env_vars=["TERM=xterm-256color", "FOO=bar"],
-        )
-
-        expected_cmd = [
-            "container",
-            "run",
-            "-it",
-            "--rm",
-            "-e",
-            "TERM=xterm-256color",
-            "-e",
-            "FOO=bar",
-            "-v",
-            "host:container",
-            "-w",
-            "/workspace",
-            "my-image",
-            "bash",
-        ]
-        mock_run.assert_called_once_with(expected_cmd, check=False, capture_output=False)
-
-    @patch("cjlib.container._run_command")
-    def test_run_interactive_without_env_vars(self, mock_run):
-        """Test run_interactive without environment variables (backwards compatibility)."""
-        mock_run.return_value = Mock(returncode=0)
-
-        self.manager.run_interactive(
-            image="my-image",
-            working_dir="/workspace",
-            volume_mounts=["host:container"],
-            command=["bash"],
-        )
-
-        # Should not include -e flags
-        expected_cmd = [
-            "container",
-            "run",
-            "-it",
-            "--rm",
-            "-v",
-            "host:container",
-            "-w",
-            "/workspace",
-            "my-image",
-            "bash",
-        ]
+        expected_cmd = ["container", "run", "-it", "--rm"] + expected_flags
+        expected_cmd += ["-v", "host:container", "-w", "/workspace", "my-image", "bash"]
         mock_run.assert_called_once_with(expected_cmd, check=False, capture_output=False)
 
     @patch("cjlib.container._run_command")

@@ -1,256 +1,205 @@
 """Tests for CLI argument parsing and command routing."""
 
+import pytest
 from unittest.mock import Mock, patch
 from cjlib.cli import main
 from cjlib.config import ConfigExistsError, ConfigNotFoundError, ImageNameNotFoundError
 from cjlib.container import ContainerNotAvailableError, ContainerBuildError, ContainerRunError
 
 
-def test_setup_command_routing():
-    """Test that setup subcommand routes to SetupCommand."""
-    with patch("sys.argv", ["cj", "setup"]):
-        with patch("cjlib.cli.Config"):
-            with patch("cjlib.cli.ContainerManager"):
-                with patch("cjlib.cli.SetupCommand") as mock_setup_class:
-                    mock_setup = Mock()
-                    mock_setup.run.return_value = 0
-                    mock_setup_class.return_value = mock_setup
-
-                    result = main()
-
-                    assert result == 0
-                    mock_setup_class.assert_called_once()
-                    mock_setup.run.assert_called_once()
+@pytest.fixture
+def mock_config():
+    """Fixture for mocked Config class."""
+    with patch("cjlib.cli.Config") as mock:
+        yield mock
 
 
-def test_update_command_routing():
-    """Test that update subcommand routes to UpdateCommand."""
-    with patch("sys.argv", ["cj", "update"]):
-        with patch("cjlib.cli.Config"):
-            with patch("cjlib.cli.ContainerManager"):
-                with patch("cjlib.cli.UpdateCommand") as mock_update_class:
-                    mock_update = Mock()
-                    mock_update.run.return_value = 0
-                    mock_update_class.return_value = mock_update
-
-                    result = main()
-
-                    assert result == 0
-                    mock_update_class.assert_called_once()
-                    mock_update.run.assert_called_once()
+@pytest.fixture
+def mock_container_manager():
+    """Fixture for mocked ContainerManager class."""
+    with patch("cjlib.cli.ContainerManager") as mock:
+        yield mock
 
 
-def test_default_command_routing():
+@pytest.fixture
+def mock_setup_command():
+    """Fixture for mocked SetupCommand class."""
+    with patch("cjlib.cli.SetupCommand") as mock:
+        yield mock
+
+
+@pytest.fixture
+def mock_update_command():
+    """Fixture for mocked UpdateCommand class."""
+    with patch("cjlib.cli.UpdateCommand") as mock:
+        yield mock
+
+
+@pytest.fixture
+def mock_claude_command():
+    """Fixture for mocked ClaudeCommand class."""
+    with patch("cjlib.cli.ClaudeCommand") as mock:
+        yield mock
+
+
+@pytest.mark.parametrize(
+    "argv,command_fixture",
+    [
+        (["cj", "setup"], "mock_setup_command"),
+        (["cj", "update"], "mock_update_command"),
+    ],
+)
+def test_command_routing(argv, command_fixture, request, mock_config, mock_container_manager):
+    """Test that setup and update subcommands route to correct handlers."""
+    mock_cmd_class = request.getfixturevalue(command_fixture)
+    mock_cmd = Mock()
+    mock_cmd.run.return_value = 0
+    mock_cmd_class.return_value = mock_cmd
+
+    with patch("sys.argv", argv):
+        result = main()
+
+    assert result == 0
+    mock_cmd_class.assert_called_once()
+    mock_cmd.run.assert_called_once()
+
+
+def test_default_command_routing(
+    mock_config, mock_container_manager, mock_setup_command, mock_claude_command
+):
     """Test that no subcommand routes to ClaudeCommand."""
+    mock_claude = Mock()
+    mock_claude.run.return_value = 0
+    mock_claude_command.return_value = mock_claude
+
     with patch("sys.argv", ["cj"]):
-        with patch("cjlib.cli.Config"):
-            with patch("cjlib.cli.ContainerManager"):
-                with patch("cjlib.cli.SetupCommand"):
-                    with patch("cjlib.cli.ClaudeCommand") as mock_claude_class:
-                        mock_claude = Mock()
-                        mock_claude.run.return_value = 0
-                        mock_claude_class.return_value = mock_claude
+        result = main()
 
-                        result = main()
-
-                        assert result == 0
-                        mock_claude_class.assert_called_once()
-                        mock_claude.run.assert_called_once()
+    assert result == 0
+    mock_claude_command.assert_called_once()
+    mock_claude.run.assert_called_once()
 
 
-def test_exit_code_propagation_setup():
-    """Test that exit codes are propagated from SetupCommand."""
-    with patch("sys.argv", ["cj", "setup"]):
-        with patch("cjlib.cli.Config"):
-            with patch("cjlib.cli.ContainerManager"):
-                with patch("cjlib.cli.SetupCommand") as mock_setup_class:
-                    mock_setup = Mock()
-                    mock_setup.run.return_value = 42
-                    mock_setup_class.return_value = mock_setup
+@pytest.mark.parametrize(
+    "argv,command_fixture,exit_code",
+    [
+        (["cj", "setup"], "mock_setup_command", 42),
+        (["cj", "update"], "mock_update_command", 1),
+    ],
+)
+def test_exit_code_propagation(
+    argv, command_fixture, exit_code, request, mock_config, mock_container_manager
+):
+    """Test that exit codes are propagated from commands."""
+    mock_cmd_class = request.getfixturevalue(command_fixture)
+    mock_cmd = Mock()
+    mock_cmd.run.return_value = exit_code
+    mock_cmd_class.return_value = mock_cmd
 
-                    result = main()
+    with patch("sys.argv", argv):
+        result = main()
 
-                    assert result == 42
-
-
-def test_exit_code_propagation_update():
-    """Test that exit codes are propagated from UpdateCommand."""
-    with patch("sys.argv", ["cj", "update"]):
-        with patch("cjlib.cli.Config"):
-            with patch("cjlib.cli.ContainerManager"):
-                with patch("cjlib.cli.UpdateCommand") as mock_update_class:
-                    mock_update = Mock()
-                    mock_update.run.return_value = 1
-                    mock_update_class.return_value = mock_update
-
-                    result = main()
-
-                    assert result == 1
+    assert result == exit_code
 
 
-def test_exit_code_propagation_claude():
+def test_exit_code_propagation_claude(
+    mock_config, mock_container_manager, mock_setup_command, mock_claude_command
+):
     """Test that exit codes are propagated from ClaudeCommand."""
+    mock_claude = Mock()
+    mock_claude.run.return_value = 5
+    mock_claude_command.return_value = mock_claude
+
     with patch("sys.argv", ["cj"]):
-        with patch("cjlib.cli.Config"):
-            with patch("cjlib.cli.ContainerManager"):
-                with patch("cjlib.cli.SetupCommand"):
-                    with patch("cjlib.cli.ClaudeCommand") as mock_claude_class:
-                        mock_claude = Mock()
-                        mock_claude.run.return_value = 5
-                        mock_claude_class.return_value = mock_claude
+        result = main()
 
-                        result = main()
-
-                        assert result == 5
+    assert result == 5
 
 
-def test_config_exists_error_handling():
-    """Test handling of ConfigExistsError."""
-    with patch("sys.argv", ["cj", "setup"]):
-        with patch("cjlib.cli.Config"):
-            with patch("cjlib.cli.ContainerManager"):
-                with patch("cjlib.cli.SetupCommand") as mock_setup_class:
-                    mock_setup = Mock()
-                    mock_setup.run.side_effect = ConfigExistsError("Config exists")
-                    mock_setup_class.return_value = mock_setup
+@pytest.mark.parametrize(
+    "argv,command_fixture,exception",
+    [
+        (["cj", "setup"], "mock_setup_command", ConfigExistsError("Config exists")),
+        (["cj", "update"], "mock_update_command", ConfigNotFoundError("Config not found")),
+        (
+            ["cj", "update"],
+            "mock_update_command",
+            ImageNameNotFoundError("Image name not found"),
+        ),
+        (
+            ["cj", "setup"],
+            "mock_setup_command",
+            ContainerNotAvailableError("Container not available"),
+        ),
+        (["cj", "setup"], "mock_setup_command", ContainerBuildError("Build failed")),
+        (["cj", "setup"], "mock_setup_command", Exception("Unexpected error")),
+    ],
+)
+def test_error_handling(
+    argv, command_fixture, exception, request, mock_config, mock_container_manager
+):
+    """Test handling of various exceptions."""
+    mock_cmd_class = request.getfixturevalue(command_fixture)
+    mock_cmd = Mock()
+    mock_cmd.run.side_effect = exception
+    mock_cmd_class.return_value = mock_cmd
 
-                    result = main()
+    with patch("sys.argv", argv):
+        result = main()
 
-                    assert result == 1
-
-
-def test_config_not_found_error_handling():
-    """Test handling of ConfigNotFoundError."""
-    with patch("sys.argv", ["cj", "update"]):
-        with patch("cjlib.cli.Config"):
-            with patch("cjlib.cli.ContainerManager"):
-                with patch("cjlib.cli.UpdateCommand") as mock_update_class:
-                    mock_update = Mock()
-                    mock_update.run.side_effect = ConfigNotFoundError("Config not found")
-                    mock_update_class.return_value = mock_update
-
-                    result = main()
-
-                    assert result == 1
-
-
-def test_image_name_not_found_error_handling():
-    """Test handling of ImageNameNotFoundError."""
-    with patch("sys.argv", ["cj", "update"]):
-        with patch("cjlib.cli.Config"):
-            with patch("cjlib.cli.ContainerManager"):
-                with patch("cjlib.cli.UpdateCommand") as mock_update_class:
-                    mock_update = Mock()
-                    mock_update.run.side_effect = ImageNameNotFoundError("Image name not found")
-                    mock_update_class.return_value = mock_update
-
-                    result = main()
-
-                    assert result == 1
+    assert result == 1
 
 
-def test_container_not_available_error_handling():
-    """Test handling of ContainerNotAvailableError."""
-    with patch("sys.argv", ["cj", "setup"]):
-        with patch("cjlib.cli.Config"):
-            with patch("cjlib.cli.ContainerManager"):
-                with patch("cjlib.cli.SetupCommand") as mock_setup_class:
-                    mock_setup = Mock()
-                    mock_setup.run.side_effect = ContainerNotAvailableError(
-                        "Container not available"
-                    )
-                    mock_setup_class.return_value = mock_setup
-
-                    result = main()
-
-                    assert result == 1
-
-
-def test_container_build_error_handling():
-    """Test handling of ContainerBuildError."""
-    with patch("sys.argv", ["cj", "setup"]):
-        with patch("cjlib.cli.Config"):
-            with patch("cjlib.cli.ContainerManager"):
-                with patch("cjlib.cli.SetupCommand") as mock_setup_class:
-                    mock_setup = Mock()
-                    mock_setup.run.side_effect = ContainerBuildError("Build failed")
-                    mock_setup_class.return_value = mock_setup
-
-                    result = main()
-
-                    assert result == 1
-
-
-def test_container_run_error_handling():
+def test_container_run_error_handling(
+    mock_config, mock_container_manager, mock_setup_command, mock_claude_command
+):
     """Test handling of ContainerRunError."""
+    mock_claude = Mock()
+    mock_claude.run.side_effect = ContainerRunError("Run failed")
+    mock_claude_command.return_value = mock_claude
+
     with patch("sys.argv", ["cj"]):
-        with patch("cjlib.cli.Config"):
-            with patch("cjlib.cli.ContainerManager"):
-                with patch("cjlib.cli.SetupCommand"):
-                    with patch("cjlib.cli.ClaudeCommand") as mock_claude_class:
-                        mock_claude = Mock()
-                        mock_claude.run.side_effect = ContainerRunError("Run failed")
-                        mock_claude_class.return_value = mock_claude
+        result = main()
 
-                        result = main()
-
-                        assert result == 1
+    assert result == 1
 
 
-def test_general_exception_handling():
-    """Test handling of general exceptions."""
-    with patch("sys.argv", ["cj", "setup"]):
-        with patch("cjlib.cli.Config"):
-            with patch("cjlib.cli.ContainerManager"):
-                with patch("cjlib.cli.SetupCommand") as mock_setup_class:
-                    mock_setup = Mock()
-                    mock_setup.run.side_effect = Exception("Unexpected error")
-                    mock_setup_class.return_value = mock_setup
-
-                    result = main()
-
-                    assert result == 1
-
-
-def test_config_and_container_manager_instantiation():
+def test_config_and_container_manager_instantiation(mock_setup_command):
     """Test that Config and ContainerManager are instantiated correctly."""
-    with patch("sys.argv", ["cj", "setup"]):
-        with patch("cjlib.cli.Config") as mock_config_class:
-            with patch("cjlib.cli.ContainerManager") as mock_container_class:
-                with patch("cjlib.cli.SetupCommand") as mock_setup_class:
-                    mock_setup = Mock()
-                    mock_setup.run.return_value = 0
-                    mock_setup_class.return_value = mock_setup
+    with patch("cjlib.cli.Config") as mock_config_class:
+        with patch("cjlib.cli.ContainerManager") as mock_container_class:
+            mock_setup = Mock()
+            mock_setup.run.return_value = 0
+            mock_setup_command.return_value = mock_setup
 
-                    main()
+            with patch("sys.argv", ["cj", "setup"]):
+                main()
 
-                    # Verify Config and ContainerManager were instantiated
-                    mock_config_class.assert_called_once()
-                    mock_container_class.assert_called_once()
+            # Verify Config and ContainerManager were instantiated
+            mock_config_class.assert_called_once()
+            mock_container_class.assert_called_once()
 
-                    # Verify they were passed to SetupCommand
-                    config_instance = mock_config_class.return_value
-                    container_instance = mock_container_class.return_value
-                    mock_setup_class.assert_called_once_with(config_instance, container_instance)
+            # Verify they were passed to SetupCommand
+            config_instance = mock_config_class.return_value
+            container_instance = mock_container_class.return_value
+            mock_setup_command.assert_called_once_with(config_instance, container_instance)
 
 
-def test_claude_mode_gets_setup_command():
+def test_claude_mode_gets_setup_command(mock_setup_command, mock_claude_command):
     """Test that ClaudeCommand receives SetupCommand instance."""
-    with patch("sys.argv", ["cj"]):
-        with patch("cjlib.cli.Config") as mock_config_class:
-            with patch("cjlib.cli.ContainerManager") as mock_container_class:
-                with patch("cjlib.cli.SetupCommand") as mock_setup_class:
-                    with patch("cjlib.cli.ClaudeCommand") as mock_claude_class:
-                        mock_claude = Mock()
-                        mock_claude.run.return_value = 0
-                        mock_claude_class.return_value = mock_claude
+    with patch("cjlib.cli.Config") as mock_config_class:
+        with patch("cjlib.cli.ContainerManager") as mock_container_class:
+            mock_claude = Mock()
+            mock_claude.run.return_value = 0
+            mock_claude_command.return_value = mock_claude
 
-                        main()
+            with patch("sys.argv", ["cj"]):
+                main()
 
-                        # Verify ClaudeCommand received Config, ContainerManager, and SetupCommand
-                        config_instance = mock_config_class.return_value
-                        container_instance = mock_container_class.return_value
-                        setup_instance = mock_setup_class.return_value
-                        mock_claude_class.assert_called_once_with(
-                            config_instance, container_instance, setup_instance
-                        )
+            # Verify ClaudeCommand received Config, ContainerManager, and SetupCommand
+            config_instance = mock_config_class.return_value
+            container_instance = mock_container_class.return_value
+            setup_instance = mock_setup_command.return_value
+            mock_claude_command.assert_called_once_with(
+                config_instance, container_instance, setup_instance
+            )
