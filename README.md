@@ -77,6 +77,20 @@ This command:
 
 **Note**: User customizations to the Dockerfile will not be retained during updates.
 
+### Interactive Shell Access
+
+To get a bash shell inside the container for debugging or manual operations:
+
+```bash
+./cj shell
+```
+
+This command:
+- Launches an interactive bash shell in the container
+- Provides the same environment and volume mounts as Claude Code
+- Useful for debugging, testing, or running commands manually
+- Exits with an error if the container image is not found (run `./cj setup` first)
+
 ## Commands
 
 ### `./cj`
@@ -87,6 +101,9 @@ Creates project configuration and builds the container image.
 
 ### `./cj update`
 Rebuilds the container image with the latest base image.
+
+### `./cj shell`
+Launches an interactive bash shell inside the container.
 
 ### `./cj --help`
 Shows usage information and available commands.
@@ -195,6 +212,7 @@ CJ consists of:
   - `setup.py`: Setup mode implementation
   - `update.py`: Update mode implementation
   - `claude.py`: Claude mode implementation
+  - `shell.py`: Shell mode implementation
   - `config.py`: Configuration management
   - `container.py`: Container operations wrapper
   - `namegen.py`: Random name generator
