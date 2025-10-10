@@ -42,15 +42,23 @@ def mock_claude_command():
         yield mock
 
 
+@pytest.fixture
+def mock_shell_command():
+    """Fixture for mocked ShellCommand class."""
+    with patch("cjlib.cli.ShellCommand") as mock:
+        yield mock
+
+
 @pytest.mark.parametrize(
     "argv,command_fixture",
     [
         (["cj", "setup"], "mock_setup_command"),
         (["cj", "update"], "mock_update_command"),
+        (["cj", "shell"], "mock_shell_command"),
     ],
 )
 def test_command_routing(argv, command_fixture, request, mock_config, mock_container_manager):
-    """Test that setup and update subcommands route to correct handlers."""
+    """Test that setup, update, and shell subcommands route to correct handlers."""
     mock_cmd_class = request.getfixturevalue(command_fixture)
     mock_cmd = Mock()
     mock_cmd.run.return_value = 0
@@ -85,6 +93,7 @@ def test_default_command_routing(
     [
         (["cj", "setup"], "mock_setup_command", 42),
         (["cj", "update"], "mock_update_command", 1),
+        (["cj", "shell"], "mock_shell_command", 3),
     ],
 )
 def test_exit_code_propagation(
@@ -133,6 +142,7 @@ def test_exit_code_propagation_claude(
         ),
         (["cj", "setup"], "mock_setup_command", ContainerBuildError("Build failed")),
         (["cj", "setup"], "mock_setup_command", Exception("Unexpected error")),
+        (["cj", "shell"], "mock_shell_command", ConfigNotFoundError("Config not found")),
     ],
 )
 def test_error_handling(

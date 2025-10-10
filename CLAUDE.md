@@ -65,8 +65,14 @@ The `cj` command is a bash script that manages its own Python virtual environmen
   - Keeps `.cj/claude` writable via separate mount to `/root/.claude`
   - Passes TERM environment variable to container for proper color support
 
+- **`shell.py`**: Implements `cj shell` command - runs interactive bash shell in container
+  - `ShellCommand` class: Manages bash shell execution in container
+  - Uses same volume mounts and security model as ClaudeCommand
+  - Runs `/bin/bash` instead of Claude Code
+  - Does not rebuild container if missing - exits with error instead
+
 - **`cli.py`**: Command-line interface and routing
-  - Routes commands to appropriate handlers (setup/update/claude)
+  - Routes commands to appropriate handlers (setup/update/claude/shell)
   - Handles exceptions and provides user-friendly error messages
 
 ### Container Integration

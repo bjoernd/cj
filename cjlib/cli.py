@@ -12,6 +12,7 @@ from cjlib.container import (
 from cjlib.setup import SetupCommand
 from cjlib.update import UpdateCommand
 from cjlib.claude import ClaudeCommand
+from cjlib.shell import ShellCommand
 
 
 def main():
@@ -32,6 +33,9 @@ def main():
     # Update subcommand
     subparsers.add_parser("update", help="Rebuild container image with latest base image")
 
+    # Shell subcommand
+    subparsers.add_parser("shell", help="Run interactive bash shell in container")
+
     args = parser.parse_args()
 
     # Instantiate dependencies
@@ -47,6 +51,10 @@ def main():
         elif args.command == "update":
             update_cmd = UpdateCommand(config, container_mgr)
             return update_cmd.run()
+
+        elif args.command == "shell":
+            shell_cmd = ShellCommand(config, container_mgr)
+            return shell_cmd.run()
 
         else:
             # Default: Claude mode (no subcommand)
