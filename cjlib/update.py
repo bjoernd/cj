@@ -3,7 +3,6 @@
 import os
 from cjlib.config import Config, ConfigNotFoundError
 from cjlib.container import ContainerManager
-from cjlib.setup import DOCKERFILE_TEMPLATE
 
 
 class UpdateCommand:
@@ -19,17 +18,11 @@ class UpdateCommand:
         self.config = config
         self.container_mgr = container_mgr
 
-    def _regenerate_dockerfile(self, path: str) -> None:
-        """Write Dockerfile template to specified path.
+    def run(self, extra_packages: list[str] = None) -> int:
+        """Execute update command.
 
         Args:
-            path: Path where Dockerfile should be written
-        """
-        with open(path, "w") as f:
-            f.write(DOCKERFILE_TEMPLATE)
-
-    def run(self) -> int:
-        """Execute update command.
+            extra_packages: Optional list of additional Ubuntu packages to install
 
         Returns:
             0 on success, 1 on failure
@@ -43,9 +36,26 @@ class UpdateCommand:
             # Read existing image name
             image_name = self.config.read_image_name()
 
+            # Read stored extra packages and merge with new ones
+            stored_packages = self.config.read_extra_packages()
+
+            if extra_packages:
+                # Merge new packages with stored ones, keeping unique packages
+                all_packages = list(set(stored_packages + extra_packages))
+                # Sort for consistent ordering
+                all_packages.sort()
+
+                # Save updated package list
+                self.config.write_extra_packages(all_packages)
+                print(f"Extra packages to install: {' '.join(all_packages)}")
+            else:
+                all_packages = stored_packages
+                if all_packages:
+                    print(f"Extra packages to install: {' '.join(all_packages)}")
+
             # Regenerate Dockerfile (user customizations will not be retained)
+            self.config.generate_and_write_dockerfile(all_packages if all_packages else None)
             dockerfile_path = self.config.get_dockerfile_path()
-            self._regenerate_dockerfile(dockerfile_path)
             print(f"Regenerated Dockerfile at {dockerfile_path}")
 
             # Rebuild container image with same tag (will use latest base image)

@@ -2,20 +2,19 @@
 
 from unittest.mock import Mock
 from cjlib.update import UpdateCommand
-from cjlib.config import Config, ConfigNotFoundError
+from cjlib.config import Config, ConfigNotFoundError, DOCKERFILE_TEMPLATE
 from cjlib.container import ContainerManager
-from cjlib.setup import DOCKERFILE_TEMPLATE
 
 
 def test_regenerate_dockerfile(tmp_path):
     """Test Dockerfile regeneration."""
-    config = Mock(spec=Config)
-    container_mgr = Mock(spec=ContainerManager)
-    update_cmd = UpdateCommand(config, container_mgr)
+    config = Config(str(tmp_path))
+    config_dir = tmp_path / ".cj"
+    config_dir.mkdir()
 
-    dockerfile_path = tmp_path / "Dockerfile"
-    update_cmd._regenerate_dockerfile(str(dockerfile_path))
+    config.generate_and_write_dockerfile()
 
+    dockerfile_path = config_dir / "Dockerfile"
     # Verify file was created with correct content
     assert dockerfile_path.exists()
     content = dockerfile_path.read_text()
@@ -32,6 +31,8 @@ def test_run_success(tmp_path):
     config.read_image_name.return_value = "cj-test-image"
     config.get_config_dir.return_value = str(config_dir)
     config.get_dockerfile_path.return_value = str(config_dir / "Dockerfile")
+    config.read_extra_packages.return_value = []
+    config.generate_and_write_dockerfile.return_value = None
 
     container_mgr = Mock(spec=ContainerManager)
 
@@ -45,6 +46,8 @@ def test_run_success(tmp_path):
     # Verify correct flow
     config.exists.assert_called_once()
     config.read_image_name.assert_called_once()
+    config.read_extra_packages.assert_called_once()
+    config.generate_and_write_dockerfile.assert_called_once()
     config.get_dockerfile_path.assert_called_once()
     container_mgr.build_image.assert_called_once()
 
@@ -95,6 +98,8 @@ def test_run_build_failure(tmp_path):
     config.read_image_name.return_value = "cj-test-image"
     config.get_config_dir.return_value = str(config_dir)
     config.get_dockerfile_path.return_value = str(config_dir / "Dockerfile")
+    config.read_extra_packages.return_value = []
+    config.generate_and_write_dockerfile.return_value = None
 
     container_mgr = Mock(spec=ContainerManager)
     container_mgr.build_image.side_effect = Exception("Build failed")
@@ -117,6 +122,8 @@ def test_run_same_image_name_reused(tmp_path):
     config.read_image_name.return_value = "cj-happy-turtle"
     config.get_config_dir.return_value = str(config_dir)
     config.get_dockerfile_path.return_value = str(config_dir / "Dockerfile")
+    config.read_extra_packages.return_value = []
+    config.generate_and_write_dockerfile.return_value = None
 
     container_mgr = Mock(spec=ContainerManager)
 
@@ -140,11 +147,11 @@ def test_run_dockerfile_regenerated(tmp_path):
     # Create existing Dockerfile with custom content
     dockerfile_path.write_text("# Custom Dockerfile\nFROM custom:image\n")
 
-    config = Mock(spec=Config)
-    config.exists.return_value = True
-    config.read_image_name.return_value = "cj-test-image"
-    config.get_config_dir.return_value = str(config_dir)
-    config.get_dockerfile_path.return_value = str(dockerfile_path)
+    # Use real Config for this test to actually write the file
+    config = Config(str(tmp_path))
+
+    # Write image name file (required for update to work)
+    config.write_image_name("cj-test-image")
 
     container_mgr = Mock(spec=ContainerManager)
 
@@ -170,6 +177,8 @@ def test_run_build_image_called_with_correct_params(tmp_path):
     config.read_image_name.return_value = "cj-test-image"
     config.get_config_dir.return_value = str(config_dir)
     config.get_dockerfile_path.return_value = dockerfile_path
+    config.read_extra_packages.return_value = []
+    config.generate_and_write_dockerfile.return_value = None
 
     container_mgr = Mock(spec=ContainerManager)
 

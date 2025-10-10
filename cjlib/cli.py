@@ -28,10 +28,24 @@ def main():
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
     # Setup subcommand
-    subparsers.add_parser("setup", help="Create project configuration and build container image")
+    setup_parser = subparsers.add_parser(
+        "setup", help="Create project configuration and build container image"
+    )
+    setup_parser.add_argument(
+        "--extra-packages",
+        type=str,
+        help="Whitespace-separated list of additional Ubuntu packages to install",
+    )
 
     # Update subcommand
-    subparsers.add_parser("update", help="Rebuild container image with latest base image")
+    update_parser = subparsers.add_parser(
+        "update", help="Rebuild container image with latest base image"
+    )
+    update_parser.add_argument(
+        "--extra-packages",
+        type=str,
+        help="Whitespace-separated list of additional Ubuntu packages to install",
+    )
 
     # Shell subcommand
     subparsers.add_parser("shell", help="Run interactive bash shell in container")
@@ -45,12 +59,22 @@ def main():
     try:
         # Route to appropriate command
         if args.command == "setup":
+            # Parse extra packages if provided
+            extra_packages = None
+            if hasattr(args, "extra_packages") and args.extra_packages:
+                extra_packages = args.extra_packages.split()
+
             setup_cmd = SetupCommand(config, container_mgr)
-            return setup_cmd.run()
+            return setup_cmd.run(extra_packages)
 
         elif args.command == "update":
+            # Parse extra packages if provided
+            extra_packages = None
+            if hasattr(args, "extra_packages") and args.extra_packages:
+                extra_packages = args.extra_packages.split()
+
             update_cmd = UpdateCommand(config, container_mgr)
-            return update_cmd.run()
+            return update_cmd.run(extra_packages)
 
         elif args.command == "shell":
             shell_cmd = ShellCommand(config, container_mgr)

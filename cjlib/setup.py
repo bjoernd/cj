@@ -6,55 +6,6 @@ from cjlib.container import ContainerManager
 from cjlib.namegen import generate_name
 
 
-DOCKERFILE_TEMPLATE = """FROM ubuntu:25.04
-
-# Update package lists and install development tools
-RUN apt-get update && apt-get install -y \\
-    gcc g++ \\
-    clang \\
-    python3 python3-dev python3-pip python3-venv \\
-    vim neovim \\
-    zsh \\
-    curl \\
-    git \\
-    && rm -rf /var/lib/apt/lists/*
-
-# Install Python development tools via pip
-RUN python3 -m pip install --break-system-packages pytest black flake8
-
-# Install Rust via rustup
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \\
-    --default-toolchain stable --profile default
-ENV PATH="/root/.cargo/bin:${PATH}"
-RUN rustc --version && cargo --version
-
-# Install Node.js (required for Claude Code)
-RUN curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - && \\
-    apt-get install -y nodejs && \\
-    rm -rf /var/lib/apt/lists/*
-
-# Install oh-my-zsh
-RUN sh -c "$(curl -fsSL \\
-    https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" \\
-    "" --unattended
-
-# Set zsh as default shell
-RUN chsh -s $(which zsh)
-ENV SHELL=/usr/bin/zsh
-
-# Install Claude Code
-RUN npm install -g @anthropic-ai/claude-code
-
-# Create symlink for .claude.json to persist state in mounted .claude directory
-RUN ln -s /root/.claude/.claude.json /root/.claude.json
-
-# Set working directory
-WORKDIR /workspace
-
-CMD ["/usr/bin/zsh"]
-"""
-
-
 # flake8: noqa: E501
 CLAUDE_MD_TEMPLATE = """## Modifying Software Projects
 - You MUST always validate that a project still builds after making changes.
@@ -93,15 +44,6 @@ class SetupCommand:
         self.config = config
         self.container_mgr = container_mgr
 
-    def _generate_dockerfile(self, path: str) -> None:
-        """Write Dockerfile template to specified path.
-
-        Args:
-            path: Path where Dockerfile should be written
-        """
-        with open(path, "w") as f:
-            f.write(DOCKERFILE_TEMPLATE)
-
     def _generate_claude_md(self, path: str) -> None:
         """Write CLAUDE.md template to specified path.
 
@@ -119,8 +61,11 @@ class SetupCommand:
             # Silently ignore cleanup errors
             pass
 
-    def run(self) -> int:
+    def run(self, extra_packages: list[str] = None) -> int:
         """Execute setup command.
+
+        Args:
+            extra_packages: Optional list of additional Ubuntu packages to install
 
         Returns:
             0 on success, 1 on failure
@@ -142,9 +87,14 @@ class SetupCommand:
             # Generate random image name
             image_name = generate_name()
 
+            # Store extra packages if provided
+            if extra_packages:
+                self.config.write_extra_packages(extra_packages)
+                print(f"Extra packages to install: {' '.join(extra_packages)}")
+
             # Write Dockerfile
+            self.config.generate_and_write_dockerfile(extra_packages)
             dockerfile_path = self.config.get_dockerfile_path()
-            self._generate_dockerfile(dockerfile_path)
             print(f"Generated Dockerfile at {dockerfile_path}")
 
             # Write default CLAUDE.md if it doesn't exist

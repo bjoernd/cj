@@ -1,20 +1,20 @@
 """Tests for setup mode implementation."""
 
 from unittest.mock import Mock, patch
-from cjlib.setup import SetupCommand, DOCKERFILE_TEMPLATE, CLAUDE_MD_TEMPLATE
-from cjlib.config import Config
+from cjlib.setup import SetupCommand, CLAUDE_MD_TEMPLATE
+from cjlib.config import Config, DOCKERFILE_TEMPLATE
 from cjlib.container import ContainerManager
 
 
 def test_generate_dockerfile(tmp_path):
     """Test Dockerfile generation."""
-    config = Mock(spec=Config)
-    container_mgr = Mock(spec=ContainerManager)
-    setup_cmd = SetupCommand(config, container_mgr)
+    config = Config(str(tmp_path))
+    config_dir = tmp_path / ".cj"
+    config_dir.mkdir()
 
-    dockerfile_path = tmp_path / "Dockerfile"
-    setup_cmd._generate_dockerfile(str(dockerfile_path))
+    config.generate_and_write_dockerfile()
 
+    dockerfile_path = config_dir / "Dockerfile"
     # Verify file was created with correct content
     assert dockerfile_path.exists()
     content = dockerfile_path.read_text()
@@ -247,10 +247,8 @@ def test_run_dockerfile_written_before_build(tmp_path):
     dockerfile_path = tmp_path / ".cj" / "Dockerfile"
     dockerfile_path.parent.mkdir(parents=True)
 
-    config = Mock(spec=Config)
-    config.exists.return_value = False
-    config.get_config_dir.return_value = str(tmp_path / ".cj")
-    config.get_dockerfile_path.return_value = str(dockerfile_path)
+    # Use real Config to actually write Dockerfile
+    config = Config(str(tmp_path))
 
     container_mgr = Mock(spec=ContainerManager)
     container_mgr.check_container_available.return_value = True

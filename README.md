@@ -48,6 +48,14 @@ This command:
 - Builds a container image
 - Stores the configuration for future use
 
+To install additional Ubuntu packages during setup:
+
+```bash
+<path-to-cj>/cj setup --extra-packages "htop tmux wget"
+```
+
+Extra packages are stored in `.cj/extra-packages` and automatically included in future container rebuilds.
+
 ### Running Claude Code
 
 Once setup is complete, simply run:
@@ -74,8 +82,17 @@ This command:
 - Regenerates the Dockerfile
 - Rebuilds the container with the same name
 - Preserves your Claude credentials
+- Automatically includes previously specified extra packages
 
-**Note**: User customizations to the Dockerfile will not be retained during updates.
+To add more packages during update:
+
+```bash
+./cj update --extra-packages "ncdu tree"
+```
+
+New packages are merged with existing ones and stored in `.cj/extra-packages`.
+
+**Note**: User customizations to the Dockerfile will not be retained during updates. Use `--extra-packages` instead.
 
 ### Interactive Shell Access
 

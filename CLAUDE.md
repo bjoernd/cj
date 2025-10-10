@@ -27,7 +27,10 @@ The `cj` command is a bash script that manages its own Python virtual environmen
 - **`config.py`**: Manages `.cj` directory structure, image names, Dockerfile paths
   - Custom exceptions: `ConfigExistsError`, `ConfigNotFoundError`, `ImageNameNotFoundError`
   - Handles credential persistence in `.cj/claude/`
-  - Constants: `CONFIG_DIR`, `IMAGE_NAME_FILE`, `DOCKERFILE_NAME`, `CLAUDE_DIR`, `VENV_DIR`
+  - Constants: `CONFIG_DIR`, `IMAGE_NAME_FILE`, `DOCKERFILE_NAME`, `CLAUDE_DIR`, `VENV_DIR`, `EXTRA_PACKAGES_FILE`, `DOCKERFILE_TEMPLATE`
+  - Extra packages management: `write_extra_packages()`, `read_extra_packages()`
+  - Dockerfile generation: `generate_and_write_dockerfile()` with dynamic package installation
+  - Automatically filters duplicate packages and detects existing packages in template
 
 - **`namegen.py`**: Generates random names like `cj-happy-turtle` for container images
   - `generate_name()`: Returns randomly generated name in format `cj-{adjective}-{noun}`
@@ -44,17 +47,20 @@ The `cj` command is a bash script that manages its own Python virtual environmen
 
 - **`setup.py`**: Implements `cj setup` - creates Dockerfile and builds container
   - `SetupCommand` class: Manages setup workflow
-  - `DOCKERFILE_TEMPLATE`: Template for container definition with all dev tools
   - `CLAUDE_MD_TEMPLATE`: Template for default project CLAUDE.md with coding guidelines
-  - `_generate_dockerfile()`: Writes Dockerfile from template
   - `_generate_claude_md()`: Writes default CLAUDE.md from template (only if file doesn't exist)
   - `_cleanup_on_failure()`: Removes .cj directory on build failure
+  - `run(extra_packages)`: Accepts optional list of additional Ubuntu packages to install
   - Generates random image names and stores configuration
   - Creates default CLAUDE.md in project root during setup (if not already present)
+  - Stores extra packages in `.cj/extra-packages` file for future rebuilds
 
 - **`update.py`**: Implements `cj update` - rebuilds container with latest base image
   - `UpdateCommand` class: Manages update workflow
   - Regenerates Dockerfile from template (user customizations not preserved)
+  - `run(extra_packages)`: Accepts optional list of additional packages
+  - Merges new packages with existing ones (stored in `.cj/extra-packages`)
+  - Automatically deduplicates and sorts package list
   - Rebuilds container with same image name
   - Logs output to `.cj/update.log`
 
@@ -73,6 +79,8 @@ The `cj` command is a bash script that manages its own Python virtual environmen
 
 - **`cli.py`**: Command-line interface and routing
   - Routes commands to appropriate handlers (setup/update/claude/shell)
+  - Parses `--extra-packages` argument for setup and update commands
+  - Splits whitespace-separated package list and passes to command handlers
   - Handles exceptions and provides user-friendly error messages
 
 ### Container Integration
