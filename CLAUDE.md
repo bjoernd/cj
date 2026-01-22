@@ -27,7 +27,10 @@ The `cj` command is a bash script that manages its own Python virtual environmen
 - **`config.py`**: Manages `.cj` directory structure, image names, Dockerfile paths
   - Custom exceptions: `ConfigExistsError`, `ConfigNotFoundError`, `ImageNameNotFoundError`
   - Handles credential persistence in `.cj/claude/`
-  - Constants: `CONFIG_DIR`, `IMAGE_NAME_FILE`, `DOCKERFILE_NAME`, `CLAUDE_DIR`, `VENV_DIR`, `EXTRA_PACKAGES_FILE`, `DOCKERFILE_TEMPLATE`
+  - Constants: `CONFIG_DIR`, `IMAGE_NAME_FILE`, `DOCKERFILE_NAME`, `CLAUDE_DIR`, `VENV_DIR`, `EXTRA_PACKAGES_FILE`
+  - Defines `DOCKERFILE_TEMPLATE`: Base Ubuntu 25.04 image with development tools
+    - Includes Python dev tools (pytest, black, flake8) installed via pip
+    - Creates symlink for `.claude.json` state persistence
   - Extra packages management: `write_extra_packages()`, `read_extra_packages()`
   - Dockerfile generation: `generate_and_write_dockerfile()` with dynamic package installation
   - Automatically filters duplicate packages and detects existing packages in template
@@ -47,7 +50,11 @@ The `cj` command is a bash script that manages its own Python virtual environmen
 
 - **`setup.py`**: Implements `cj setup` - creates Dockerfile and builds container
   - `SetupCommand` class: Manages setup workflow
-  - `CLAUDE_MD_TEMPLATE`: Template for default project CLAUDE.md with coding guidelines
+  - `CLAUDE_MD_TEMPLATE`: Template for default project CLAUDE.md with coding guidelines including:
+    - Modifying Software Projects: build validation, linting, testing requirements
+    - Secure Coding: no logging of secrets, no log files in git
+    - Documentation: commit message guidelines, avoid boastful language
+    - Rust: cargo fmt and clippy usage
   - `_generate_claude_md()`: Writes default CLAUDE.md from template (only if file doesn't exist)
   - `_cleanup_on_failure()`: Removes .cj directory on build failure
   - `run(extra_packages)`: Accepts optional list of additional Ubuntu packages to install
@@ -88,7 +95,10 @@ The `cj` command is a bash script that manages its own Python virtual environmen
 CJ targets macOS's `container` tool (not Docker). Key differences:
 - Command: `container` instead of `docker`
 - Uses Ubuntu 25.04 as base image
+- Dockerfile template defined in `config.py` as `DOCKERFILE_TEMPLATE`
 - Installs: GCC, Clang, Python, Rust, Node.js, vim, neovim, zsh, oh-my-zsh, Claude Code
+- Python development tools (pytest, black, flake8) installed via pip
+- Creates symlink for `.claude.json` to persist state in mounted `.claude` directory
 
 ### Credential Persistence Strategy
 
@@ -206,6 +216,19 @@ Per implementation plan:
 - Include edge cases and error conditions
 - Target >95% coverage per module
 - Mock external dependencies (subprocess, container commands)
+
+### Test Suite Structure
+
+- **`test_config.py`**: Tests for configuration management and Dockerfile generation
+- **`test_namegen.py`**: Tests for random name generation
+- **`test_container.py`**: Tests for container operations wrapper
+- **`test_setup.py`**: Tests for setup command implementation
+- **`test_update.py`**: Tests for update command implementation
+- **`test_claude.py`**: Tests for Claude mode implementation
+- **`test_shell.py`**: Tests for shell command implementation
+- **`test_cli.py`**: Tests for CLI argument parsing and routing
+- **`test_extra_packages.py`**: Tests for extra packages functionality (parsing, merging, deduplication)
+- **`conftest.py`**: Shared pytest fixtures and test configuration
 
 ## Git Workflow
 
