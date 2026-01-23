@@ -57,7 +57,7 @@ The `cj` command is a bash script that manages its own Python virtual environmen
     - Rust: cargo fmt and clippy usage
   - `_generate_claude_md()`: Writes default CLAUDE.md from template (only if file doesn't exist)
   - `_cleanup_on_failure()`: Removes .cj directory on build failure
-  - `run(extra_packages)`: Accepts optional list of additional Ubuntu packages to install
+  - `run(extra_packages, allowed_domains, filter_network)`: Executes setup workflow
   - Generates random image names and stores configuration
   - Creates default CLAUDE.md in project root during setup (if not already present)
   - Stores extra packages in `.cj/extra-packages` file for future rebuilds
@@ -65,24 +65,31 @@ The `cj` command is a bash script that manages its own Python virtual environmen
 - **`update.py`**: Implements `cj update` - rebuilds container with latest base image
   - `UpdateCommand` class: Manages update workflow
   - Regenerates Dockerfile from template (user customizations not preserved)
-  - `run(extra_packages)`: Accepts optional list of additional packages
+  - `run(extra_packages, allowed_domains)`: Executes update workflow
   - Merges new packages with existing ones (stored in `.cj/extra-packages`)
+  - Merges new domains with existing allowlist
   - Automatically deduplicates and sorts package list
   - Rebuilds container with same image name
   - Logs output to `.cj/update.log`
 
 - **`claude.py`**: Implements default `cj` command - runs Claude Code in container
   - `ClaudeCommand` class: Manages Claude Code execution in container
+  - Constructor takes `config`, `container_mgr`, `setup_cmd`, and optional `proxy_mgr`
   - Handles volume mounts for workspace, credentials, and config
   - Mounts `.cj` directory as read-only to prevent tampering with venv, Dockerfile, etc.
   - Keeps `.cj/claude` writable via separate mount to `/root/.claude`
+  - `run(proxy_host)`: Executes Claude Code, optionally with proxy host override
   - Passes TERM environment variable to container for proper color support
+  - Starts Squid proxy and sets HTTP_PROXY env vars when network filtering enabled
 
 - **`shell.py`**: Implements `cj shell` command - runs interactive bash shell in container
   - `ShellCommand` class: Manages bash shell execution in container
+  - Constructor takes `config`, `container_mgr`, and optional `proxy_mgr`
   - Uses same volume mounts and security model as ClaudeCommand
   - Runs `/bin/bash` instead of Claude Code
+  - `run(proxy_host)`: Executes bash shell, optionally with proxy host override
   - Does not rebuild container if missing - exits with error instead
+  - Starts Squid proxy and sets HTTP_PROXY env vars when network filtering enabled
 
 - **`proxy.py`**: Network filtering via Squid proxy
   - `ProxyManager` class: Manages Squid proxy operations for network filtering
