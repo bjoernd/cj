@@ -175,41 +175,48 @@ def test_container_run_error_handling(
 
 
 def test_config_and_container_manager_instantiation(mock_setup_command):
-    """Test that Config and ContainerManager are instantiated correctly."""
+    """Test that Config, ContainerManager, and ProxyManager are instantiated correctly."""
     with patch("cjlib.cli.Config") as mock_config_class:
         with patch("cjlib.cli.ContainerManager") as mock_container_class:
-            mock_setup = Mock()
-            mock_setup.run.return_value = 0
-            mock_setup_command.return_value = mock_setup
+            with patch("cjlib.cli.ProxyManager") as mock_proxy_class:
+                mock_setup = Mock()
+                mock_setup.run.return_value = 0
+                mock_setup_command.return_value = mock_setup
 
-            with patch("sys.argv", ["cj", "setup"]):
-                main()
+                with patch("sys.argv", ["cj", "setup"]):
+                    main()
 
-            # Verify Config and ContainerManager were instantiated
-            mock_config_class.assert_called_once()
-            mock_container_class.assert_called_once()
+                # Verify Config, ContainerManager, and ProxyManager were instantiated
+                mock_config_class.assert_called_once()
+                mock_container_class.assert_called_once()
+                mock_proxy_class.assert_called_once()
 
-            # Verify they were passed to SetupCommand
-            config_instance = mock_config_class.return_value
-            container_instance = mock_container_class.return_value
-            mock_setup_command.assert_called_once_with(config_instance, container_instance)
+                # Verify they were passed to SetupCommand
+                config_instance = mock_config_class.return_value
+                container_instance = mock_container_class.return_value
+                proxy_instance = mock_proxy_class.return_value
+                mock_setup_command.assert_called_once_with(
+                    config_instance, container_instance, proxy_instance
+                )
 
 
 def test_claude_mode_gets_setup_command(mock_setup_command, mock_claude_command):
-    """Test that ClaudeCommand receives SetupCommand instance."""
+    """Test that ClaudeCommand receives SetupCommand and ProxyManager instances."""
     with patch("cjlib.cli.Config") as mock_config_class:
         with patch("cjlib.cli.ContainerManager") as mock_container_class:
-            mock_claude = Mock()
-            mock_claude.run.return_value = 0
-            mock_claude_command.return_value = mock_claude
+            with patch("cjlib.cli.ProxyManager") as mock_proxy_class:
+                mock_claude = Mock()
+                mock_claude.run.return_value = 0
+                mock_claude_command.return_value = mock_claude
 
-            with patch("sys.argv", ["cj"]):
-                main()
+                with patch("sys.argv", ["cj"]):
+                    main()
 
-            # Verify ClaudeCommand received Config, ContainerManager, and SetupCommand
-            config_instance = mock_config_class.return_value
-            container_instance = mock_container_class.return_value
-            setup_instance = mock_setup_command.return_value
-            mock_claude_command.assert_called_once_with(
-                config_instance, container_instance, setup_instance
-            )
+                # Verify ClaudeCommand received Config, ContainerManager, SetupCommand, and Proxy
+                config_instance = mock_config_class.return_value
+                container_instance = mock_container_class.return_value
+                setup_instance = mock_setup_command.return_value
+                proxy_instance = mock_proxy_class.return_value
+                mock_claude_command.assert_called_once_with(
+                    config_instance, container_instance, setup_instance, proxy_instance
+                )

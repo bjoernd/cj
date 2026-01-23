@@ -9,6 +9,7 @@ from cjlib.container import (
     ContainerBuildError,
     ContainerRunError,
 )
+from cjlib.proxy import ProxyManager, ProxyNotAvailableError
 from cjlib.setup import SetupCommand
 from cjlib.update import UpdateCommand
 from cjlib.claude import ClaudeCommand
@@ -25,6 +26,23 @@ def main():
         description="CJ (Claude Jailer) - Run Claude Code in an isolated container"
     )
 
+    # Global arguments for default command (claude mode)
+    parser.add_argument(
+        "--filter-network",
+        action="store_true",
+        help="Enable network filtering via Squid proxy (persists)",
+    )
+    parser.add_argument(
+        "--no-filter-network",
+        action="store_true",
+        help="Disable network filtering (persists)",
+    )
+    parser.add_argument(
+        "--proxy-host",
+        type=str,
+        help="Override auto-detected host IP for proxy URL",
+    )
+
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
     # Setup subcommand
@@ -36,6 +54,16 @@ def main():
         type=str,
         help="Whitespace-separated list of additional Ubuntu packages to install",
     )
+    setup_parser.add_argument(
+        "--allowed-domains",
+        type=str,
+        help="Whitespace-separated domains to allow (creates allowlist)",
+    )
+    setup_parser.add_argument(
+        "--filter-network",
+        action="store_true",
+        help="Enable network filtering via Squid proxy",
+    )
 
     # Update subcommand
     update_parser = subparsers.add_parser(
@@ -46,15 +74,36 @@ def main():
         type=str,
         help="Whitespace-separated list of additional Ubuntu packages to install",
     )
+    update_parser.add_argument(
+        "--allowed-domains",
+        type=str,
+        help="Whitespace-separated domains to add to allowlist",
+    )
 
     # Shell subcommand
-    subparsers.add_parser("shell", help="Run interactive bash shell in container")
+    shell_parser = subparsers.add_parser("shell", help="Run interactive bash shell in container")
+    shell_parser.add_argument(
+        "--filter-network",
+        action="store_true",
+        help="Enable network filtering via Squid proxy (persists)",
+    )
+    shell_parser.add_argument(
+        "--no-filter-network",
+        action="store_true",
+        help="Disable network filtering (persists)",
+    )
+    shell_parser.add_argument(
+        "--proxy-host",
+        type=str,
+        help="Override auto-detected host IP for proxy URL",
+    )
 
     args = parser.parse_args()
 
     # Instantiate dependencies
     config = Config()
     container_mgr = ContainerManager()
+    proxy_mgr = ProxyManager(config.get_config_dir())
 
     try:
         # Route to appropriate command
@@ -64,8 +113,16 @@ def main():
             if hasattr(args, "extra_packages") and args.extra_packages:
                 extra_packages = args.extra_packages.split()
 
-            setup_cmd = SetupCommand(config, container_mgr)
-            return setup_cmd.run(extra_packages)
+            # Parse allowed domains if provided
+            allowed_domains = None
+            if hasattr(args, "allowed_domains") and args.allowed_domains:
+                allowed_domains = args.allowed_domains.split()
+
+            # Check for filter-network flag
+            filter_network = getattr(args, "filter_network", False)
+
+            setup_cmd = SetupCommand(config, container_mgr, proxy_mgr)
+            return setup_cmd.run(extra_packages, allowed_domains, filter_network)
 
         elif args.command == "update":
             # Parse extra packages if provided
@@ -73,18 +130,43 @@ def main():
             if hasattr(args, "extra_packages") and args.extra_packages:
                 extra_packages = args.extra_packages.split()
 
-            update_cmd = UpdateCommand(config, container_mgr)
-            return update_cmd.run(extra_packages)
+            # Parse allowed domains if provided
+            allowed_domains = None
+            if hasattr(args, "allowed_domains") and args.allowed_domains:
+                allowed_domains = args.allowed_domains.split()
+
+            update_cmd = UpdateCommand(config, container_mgr, proxy_mgr)
+            return update_cmd.run(extra_packages, allowed_domains)
 
         elif args.command == "shell":
-            shell_cmd = ShellCommand(config, container_mgr)
-            return shell_cmd.run()
+            # Handle --filter-network / --no-filter-network
+            filter_network = getattr(args, "filter_network", False)
+            no_filter_network = getattr(args, "no_filter_network", False)
+            proxy_host = getattr(args, "proxy_host", None)
+
+            if filter_network:
+                proxy_mgr.set_filter_enabled(True)
+            elif no_filter_network:
+                proxy_mgr.set_filter_enabled(False)
+
+            shell_cmd = ShellCommand(config, container_mgr, proxy_mgr)
+            return shell_cmd.run(proxy_host)
 
         else:
             # Default: Claude mode (no subcommand)
-            setup_cmd = SetupCommand(config, container_mgr)
-            claude_cmd = ClaudeCommand(config, container_mgr, setup_cmd)
-            return claude_cmd.run()
+            # Handle --filter-network / --no-filter-network
+            filter_network = getattr(args, "filter_network", False)
+            no_filter_network = getattr(args, "no_filter_network", False)
+            proxy_host = getattr(args, "proxy_host", None)
+
+            if filter_network:
+                proxy_mgr.set_filter_enabled(True)
+            elif no_filter_network:
+                proxy_mgr.set_filter_enabled(False)
+
+            setup_cmd = SetupCommand(config, container_mgr, proxy_mgr)
+            claude_cmd = ClaudeCommand(config, container_mgr, setup_cmd, proxy_mgr)
+            return claude_cmd.run(proxy_host)
 
     except ConfigExistsError as e:
         print(f"Error: {e}")
@@ -102,6 +184,9 @@ def main():
         print(f"Error: {e}")
         return 1
     except ContainerRunError as e:
+        print(f"Error: {e}")
+        return 1
+    except ProxyNotAvailableError as e:
         print(f"Error: {e}")
         return 1
     except Exception as e:

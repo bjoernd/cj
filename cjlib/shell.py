@@ -3,6 +3,7 @@
 import os
 from cjlib.config import Config, ConfigNotFoundError, ImageNameNotFoundError
 from cjlib.container import ContainerManager
+from cjlib.proxy import ProxyManager
 
 
 # Container paths
@@ -13,15 +14,19 @@ CONTAINER_WORKSPACE = "/workspace"
 class ShellCommand:
     """Implements the Shell command for CJ."""
 
-    def __init__(self, config: Config, container_mgr: ContainerManager):
+    def __init__(
+        self, config: Config, container_mgr: ContainerManager, proxy_mgr: ProxyManager = None
+    ):
         """Initialize ShellCommand.
 
         Args:
             config: Config instance for managing .cj directory
             container_mgr: ContainerManager instance for container operations
+            proxy_mgr: Optional ProxyManager instance for proxy operations
         """
         self.config = config
         self.container_mgr = container_mgr
+        self.proxy_mgr = proxy_mgr
 
     def _get_volume_mounts(self) -> list[str]:
         """Get list of volume mount strings for container.
@@ -39,8 +44,11 @@ class ShellCommand:
             f"{claude_dir}:{CONTAINER_CLAUDE_DIR}",  # Keep credentials writable
         ]
 
-    def run(self) -> int:
+    def run(self, proxy_host: str = None) -> int:
         """Execute Shell command.
+
+        Args:
+            proxy_host: Optional host IP override for proxy URL
 
         Returns:
             0 on success, 1 on failure, or container exit code
@@ -69,6 +77,14 @@ class ShellCommand:
             env_vars = []
             term_value = os.environ.get("TERM", "xterm-256color")
             env_vars.append(f"TERM={term_value}")
+
+            # Handle network filtering
+            if self.proxy_mgr and self.proxy_mgr.is_filter_enabled():
+                self.proxy_mgr.ensure_available()
+                self.proxy_mgr.write_squid_config()
+                self.proxy_mgr.start_squid()
+                env_vars.extend(self.proxy_mgr.get_proxy_env_vars(proxy_host))
+                print("Network filtering enabled")
 
             # Run container interactively with bash
             exit_code = self.container_mgr.run_interactive(

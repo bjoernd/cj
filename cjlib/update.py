@@ -3,26 +3,32 @@
 import os
 from cjlib.config import Config, ConfigNotFoundError
 from cjlib.container import ContainerManager
+from cjlib.proxy import ProxyManager
 
 
 class UpdateCommand:
     """Implements the update command for CJ."""
 
-    def __init__(self, config: Config, container_mgr: ContainerManager):
+    def __init__(
+        self, config: Config, container_mgr: ContainerManager, proxy_mgr: ProxyManager = None
+    ):
         """Initialize UpdateCommand.
 
         Args:
             config: Config instance for managing .cj directory
             container_mgr: ContainerManager instance for container operations
+            proxy_mgr: Optional ProxyManager instance for proxy operations
         """
         self.config = config
         self.container_mgr = container_mgr
+        self.proxy_mgr = proxy_mgr
 
-    def run(self, extra_packages: list[str] = None) -> int:
+    def run(self, extra_packages: list[str] = None, allowed_domains: list[str] = None) -> int:
         """Execute update command.
 
         Args:
             extra_packages: Optional list of additional Ubuntu packages to install
+            allowed_domains: Optional list of domains to add to allowlist
 
         Returns:
             0 on success, 1 on failure
@@ -52,6 +58,11 @@ class UpdateCommand:
                 all_packages = stored_packages
                 if all_packages:
                     print(f"Extra packages to install: {' '.join(all_packages)}")
+
+            # Handle allowed domains
+            if self.proxy_mgr and allowed_domains:
+                self.proxy_mgr.merge_allowlist(allowed_domains)
+                print(f"Added to network allowlist: {' '.join(allowed_domains)}")
 
             # Regenerate Dockerfile (user customizations will not be retained)
             self.config.generate_and_write_dockerfile(all_packages if all_packages else None)

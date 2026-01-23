@@ -287,9 +287,10 @@ def test_cli_setup_with_extra_packages_parsing():
 
             result = main()
 
-            # Verify setup was called with parsed packages
+            # Verify setup was called with parsed packages (also None for allowed_domains, False
+            # for filter_network)
             assert result == 0
-            mock_cmd.run.assert_called_once_with(["htop", "tmux", "wget"])
+            mock_cmd.run.assert_called_once_with(["htop", "tmux", "wget"], None, False)
 
 
 def test_cli_update_with_extra_packages_parsing():
@@ -304,6 +305,6 @@ def test_cli_update_with_extra_packages_parsing():
 
             result = main()
 
-            # Verify update was called with parsed packages
+            # Verify update was called with parsed packages (also None for allowed_domains)
             assert result == 0
-            mock_cmd.run.assert_called_once_with(["ncdu", "tree"])
+            mock_cmd.run.assert_called_once_with(["ncdu", "tree"], None)
