@@ -84,9 +84,27 @@ The `cj` command is a bash script that manages its own Python virtual environmen
   - Runs `/bin/bash` instead of Claude Code
   - Does not rebuild container if missing - exits with error instead
 
+- **`proxy.py`**: Network filtering via Squid proxy
+  - `ProxyManager` class: Manages Squid proxy operations for network filtering
+  - `check_squid_installed()`: Verifies Squid is installed via `shutil.which`
+  - `check_squid_running()`: Tests connection to proxy port (3128)
+  - `detect_host_ip()`: Auto-detects host IP using `ipconfig getifaddr en0`
+  - `get_proxy_url()`: Returns proxy URL (e.g., `http://192.168.1.100:3128`)
+  - `read_allowlist()`, `write_allowlist()`, `merge_allowlist()`: Manage allowed domains
+  - `generate_squid_config()`, `write_squid_config()`: Generate Squid configuration
+  - `start_squid()`, `stop_squid()`, `reload_squid()`: Control Squid process
+  - `is_filter_enabled()`, `set_filter_enabled()`: Manage filter persistence
+  - `get_proxy_env_vars()`: Returns env vars for container (HTTP_PROXY, etc.)
+  - `ensure_available()`: Verifies Squid is installed, raises `ProxyNotAvailableError`
+  - Constants: `NETWORK_ALLOWLIST_FILE`, `NETWORK_FILTER_ENABLED_FILE`, `SQUID_CONFIG_FILE`
+  - `DEFAULT_ALLOWLIST`: api.anthropic.com, github.com, npm, pypi, crates.io, rustup.rs
+  - Custom exceptions: `ProxyNotAvailableError`, `ProxyNotRunningError`
+
 - **`cli.py`**: Command-line interface and routing
   - Routes commands to appropriate handlers (setup/update/claude/shell)
   - Parses `--extra-packages` argument for setup and update commands
+  - Parses `--allowed-domains` argument for setup and update commands
+  - Handles `--filter-network`, `--no-filter-network`, `--proxy-host` flags
   - Splits whitespace-separated package list and passes to command handlers
   - Handles exceptions and provides user-friendly error messages
 
@@ -114,7 +132,7 @@ CJ's primary security goal is to prevent malicious LLM agents from accessing dat
 **Security model:**
 - **Filesystem isolation**: Only the current working directory is mounted; parent directories and other files on the host are inaccessible
 - **Workspace access**: Project files are intentionally read-write to allow Claude Code to function normally
-- **Network access**: Container has unrestricted network access (intentional - required for package downloads, API calls, etc.)
+- **Network access**: By default unrestricted; optional network filtering via Squid proxy
 - **Config directory protection**: `.cj` directory is mounted as read-only to prevent:
   - Tampering with Python virtual environment (`.cj/venv`)
   - Modifying Dockerfile or container configuration
@@ -122,15 +140,25 @@ CJ's primary security goal is to prevent malicious LLM agents from accessing dat
 - **Credential separation**: `.cj/claude` is separately mounted to `/root/.claude` as read-write
 - **Minimal attack surface**: No SSH server, network listeners, or unnecessary services in container
 
+**Network Filtering (optional):**
+- Enable with `--filter-network` flag
+- Uses host-side Squid proxy with domain allowlist
+- Default allowlist includes: api.anthropic.com, github.com, npm, pypi, crates.io, rustup.rs
+- Custom domains can be added via `--allowed-domains` during setup/update
+- Setting persists in `.cj/network-filter-enabled`
+- Requires Squid to be installed on host (`brew install squid`)
+
 **What CJ protects against:**
 - Reading files outside the project directory (e.g., `~/.ssh/`, `~/Documents/`)
 - Accessing other projects or system files
 - Modifying CJ's own configuration or virtual environment from within container
+- Network-based data exfiltration (when network filtering is enabled)
 
 **What CJ does NOT protect against:**
-- Network-based attacks or data exfiltration (network is unrestricted)
+- Network-based attacks or data exfiltration (when network filtering is disabled)
 - Malicious modifications to project files (workspace is intentionally writable)
 - Resource exhaustion (no CPU/memory limits currently enforced)
+- Tools that bypass proxy env vars (when network filtering is enabled)
 
 Volume mount strategy:
 1. Workspace (`/workspace`): read-write access to project files
@@ -228,6 +256,7 @@ Per implementation plan:
 - **`test_shell.py`**: Tests for shell command implementation
 - **`test_cli.py`**: Tests for CLI argument parsing and routing
 - **`test_extra_packages.py`**: Tests for extra packages functionality (parsing, merging, deduplication)
+- **`test_proxy.py`**: Tests for proxy management and network filtering
 - **`conftest.py`**: Shared pytest fixtures and test configuration
 
 ## Git Workflow

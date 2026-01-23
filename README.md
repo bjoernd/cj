@@ -16,6 +16,7 @@ The main benefit is that CJ prevents malicious LLM agents to extract data from o
 - macOS 26 (Tahoe) or later with the `container` command installed
 - Python 3.9 or higher
 - Node.js (for Claude Code)
+- Squid proxy (optional, for network filtering): `brew install squid`
 
 ## Installation
 
@@ -108,19 +109,100 @@ This command:
 - Useful for debugging, testing, or running commands manually
 - Exits with an error if the container image is not found (run `./cj setup` first)
 
+### Network Filtering
+
+CJ supports optional network filtering to restrict which domains the container can access. This helps prevent data exfiltration by malicious LLM agents.
+
+#### Prerequisites
+
+Install Squid proxy on your Mac:
+
+```bash
+brew install squid
+```
+
+#### Enabling Network Filtering
+
+Enable filtering when running Claude Code:
+
+```bash
+./cj --filter-network
+```
+
+The setting persists, so subsequent runs will also use filtering:
+
+```bash
+./cj  # Still uses filtering
+```
+
+To disable filtering:
+
+```bash
+./cj --no-filter-network
+```
+
+#### Custom Allowed Domains
+
+By default, the following domains are allowed:
+- api.anthropic.com (Claude API)
+- github.com and .github.com
+- registry.npmjs.org (npm packages)
+- pypi.org and files.pythonhosted.org (Python packages)
+- crates.io and static.crates.io (Rust packages)
+- rustup.rs and static.rust-lang.org (Rust toolchain)
+
+Add custom domains during setup:
+
+```bash
+./cj setup --allowed-domains "example.com api.myservice.com" --filter-network
+```
+
+Or add domains later with update:
+
+```bash
+./cj update --allowed-domains "new-domain.com"
+```
+
+#### Host IP Override
+
+If auto-detection fails, specify the host IP manually:
+
+```bash
+./cj --filter-network --proxy-host 192.168.1.100
+```
+
 ## Commands
 
 ### `./cj`
 Runs Claude Code in the container (default command).
 
+Options:
+- `--filter-network`: Enable network filtering (persists)
+- `--no-filter-network`: Disable network filtering (persists)
+- `--proxy-host HOST`: Override auto-detected host IP for proxy
+
 ### `./cj setup`
 Creates project configuration and builds the container image.
+
+Options:
+- `--extra-packages "pkg1 pkg2"`: Additional Ubuntu packages to install
+- `--allowed-domains "domain1 domain2"`: Domains to allow through proxy
+- `--filter-network`: Enable network filtering
 
 ### `./cj update`
 Rebuilds the container image with the latest base image.
 
+Options:
+- `--extra-packages "pkg1 pkg2"`: Additional Ubuntu packages to install
+- `--allowed-domains "domain1 domain2"`: Domains to add to allowlist
+
 ### `./cj shell`
 Launches an interactive bash shell inside the container.
+
+Options:
+- `--filter-network`: Enable network filtering (persists)
+- `--no-filter-network`: Disable network filtering (persists)
+- `--proxy-host HOST`: Override auto-detected host IP for proxy
 
 ### `./cj --help`
 Shows usage information and available commands.
@@ -132,10 +214,14 @@ After running `./cj setup`, the following structure is created:
 ```
 your-project/
 ├── .cj/
-│   ├── venv/              # Python virtual environment (auto-managed)
-│   ├── claude/            # Claude Code credentials (persisted)
-│   ├── image-name         # Container image name
-│   └── Dockerfile         # Container definition
+│   ├── venv/                   # Python virtual environment (auto-managed)
+│   ├── claude/                 # Claude Code credentials (persisted)
+│   ├── image-name              # Container image name
+│   ├── Dockerfile              # Container definition
+│   ├── extra-packages          # Additional Ubuntu packages (if specified)
+│   ├── network-allowlist       # Allowed domains for proxy (if filtering enabled)
+│   ├── network-filter-enabled  # Network filtering state
+│   └── squid.conf              # Squid proxy configuration (auto-generated)
 └── (your project files)
 ```
 
@@ -233,6 +319,7 @@ CJ consists of:
   - `config.py`: Configuration management
   - `container.py`: Container operations wrapper
   - `namegen.py`: Random name generator
+  - `proxy.py`: Network filtering via Squid proxy
 
 ## License
 
