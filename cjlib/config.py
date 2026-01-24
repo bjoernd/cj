@@ -271,31 +271,20 @@ class Config:
             # No new packages to add, return template as-is
             return DOCKERFILE_TEMPLATE
 
-        # Add new packages to the apt-get install line
-        # Find the line with apt-get install and add packages there
+        # Add new packages to the apt-get install block
+        # Insert them before the "&& rm -rf" line
         lines = DOCKERFILE_TEMPLATE.split("\n")
         result_lines = []
-        in_apt_install = False
-        install_block_lines = []
 
         for line in lines:
             stripped = line.strip()
 
-            if "apt-get install" in stripped:
-                in_apt_install = True
-                install_block_lines = [line]
-            elif in_apt_install:
-                install_block_lines.append(line)
-                if not stripped.endswith("\\"):
-                    # End of apt-get install block
-                    # Add new packages before the last line
-                    for pkg in new_packages:
-                        # Add each package with proper indentation and continuation
-                        result_lines.append(f"    {pkg} \\")
-                    # Append the collected install block lines
-                    result_lines.extend(install_block_lines)
-                    in_apt_install = False
-                    install_block_lines = []
+            # Insert new packages before the cleanup line
+            if stripped.startswith("&& rm -rf"):
+                # Add new packages with proper indentation and continuation
+                for pkg in new_packages:
+                    result_lines.append(f"    {pkg} \\")
+                result_lines.append(line)
             else:
                 result_lines.append(line)
 

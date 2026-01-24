@@ -79,6 +79,27 @@ def test_generate_dockerfile_with_new_packages(tmp_path):
     assert "claude-code" in content
 
 
+def test_generate_dockerfile_packages_in_correct_position(tmp_path):
+    """Test that new packages are inserted inside the apt-get install block."""
+    config = Config(str(tmp_path))
+
+    content = config._generate_dockerfile_with_packages(["ping"])
+
+    # The package must appear AFTER apt-get install and BEFORE && rm -rf
+    apt_install_pos = content.find("apt-get install")
+    rm_rf_pos = content.find("&& rm -rf")
+    ping_pos = content.find("ping")
+
+    assert apt_install_pos != -1, "apt-get install not found in Dockerfile"
+    assert rm_rf_pos != -1, "&& rm -rf not found in Dockerfile"
+    assert ping_pos != -1, "ping package not found in Dockerfile"
+
+    assert apt_install_pos < ping_pos < rm_rf_pos, (
+        f"ping package at wrong position: apt-get install at {apt_install_pos}, "
+        f"ping at {ping_pos}, && rm -rf at {rm_rf_pos}"
+    )
+
+
 def test_generate_dockerfile_with_duplicate_packages(tmp_path):
     """Test that duplicate packages are filtered out."""
     config = Config(str(tmp_path))
