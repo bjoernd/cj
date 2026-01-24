@@ -198,7 +198,7 @@ class TestProxyManagerConfig:
         # Allowlist file should now exist with default domains
         assert allowlist_path.exists()
         content = allowlist_path.read_text()
-        assert "api.anthropic.com" in content
+        assert ".anthropic.com" in content
 
 
 class TestProxyManagerFilterEnabled:
@@ -325,8 +325,10 @@ class TestDefaultAllowlist:
     """Tests for default allowlist domains."""
 
     def test_default_allowlist_contains_anthropic(self):
-        """Test default allowlist contains Anthropic API."""
-        assert "api.anthropic.com" in DEFAULT_ALLOWLIST
+        """Test default allowlist contains Anthropic domains."""
+        assert ".anthropic.com" in DEFAULT_ALLOWLIST
+        assert ".claude.ai" in DEFAULT_ALLOWLIST
+        assert ".claude.com" in DEFAULT_ALLOWLIST
 
     def test_default_allowlist_contains_github(self):
         """Test default allowlist contains GitHub."""

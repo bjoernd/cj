@@ -22,7 +22,9 @@ class ProxyNotRunningError(Exception):
 
 # Default domains that are allowed through the proxy
 DEFAULT_ALLOWLIST = [
-    "api.anthropic.com",
+    ".anthropic.com",
+    ".claude.ai",
+    ".claude.com",
     "github.com",
     ".github.com",
     "registry.npmjs.org",
