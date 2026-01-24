@@ -182,9 +182,18 @@ http_access deny all
         return config
 
     def write_squid_config(self) -> None:
-        """Write Squid configuration to file."""
-        config_path = self._get_squid_config_path()
+        """Write Squid configuration to file.
+
+        Ensures the allowlist file exists with defaults before writing config.
+        """
         self.config_dir.mkdir(parents=True, exist_ok=True)
+
+        # Ensure allowlist file exists (Squid config references it)
+        allowlist_path = self._get_allowlist_path()
+        if not allowlist_path.exists():
+            self.write_allowlist(DEFAULT_ALLOWLIST)
+
+        config_path = self._get_squid_config_path()
         config_path.write_text(self.generate_squid_config())
 
     def _get_filter_enabled_path(self) -> Path:

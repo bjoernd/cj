@@ -187,6 +187,19 @@ class TestProxyManagerConfig:
         content = squid_conf.read_text()
         assert "http_port 3128" in content
 
+    def test_write_squid_config_creates_allowlist_if_missing(self, tmp_path):
+        """Test write_squid_config creates allowlist with defaults if missing."""
+        manager = ProxyManager(str(tmp_path))
+        allowlist_path = tmp_path / "network-allowlist"
+        assert not allowlist_path.exists()
+
+        manager.write_squid_config()
+
+        # Allowlist file should now exist with default domains
+        assert allowlist_path.exists()
+        content = allowlist_path.read_text()
+        assert "api.anthropic.com" in content
+
 
 class TestProxyManagerFilterEnabled:
     """Tests for network filter enabled state."""

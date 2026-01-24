@@ -6,7 +6,6 @@ from cjlib.container import ContainerManager
 from cjlib.namegen import generate_name
 from cjlib.proxy import ProxyManager
 
-
 # flake8: noqa: E501
 CLAUDE_MD_TEMPLATE = """## Modifying Software Projects
 - You MUST always validate that a project still builds after making changes.

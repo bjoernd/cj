@@ -5,7 +5,6 @@ from cjlib.config import Config, ConfigNotFoundError, ImageNameNotFoundError
 from cjlib.container import ContainerManager
 from cjlib.proxy import ProxyManager
 
-
 # Container paths
 CONTAINER_CLAUDE_DIR = "/root/.claude"
 CONTAINER_WORKSPACE = "/workspace"

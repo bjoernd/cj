@@ -3,7 +3,6 @@
 import shutil
 from pathlib import Path
 
-
 # Dockerfile template for container setup
 DOCKERFILE_TEMPLATE = """FROM ubuntu:25.04
 
