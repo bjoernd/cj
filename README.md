@@ -4,6 +4,8 @@ CJ is a macOS application that runs Claude Code within an isolated container env
 
 The main benefit is that CJ prevents malicious LLM agents to extract data from outside your project working directory. The project directory itself is intentionally read/writable. The container intentionally also has unrestricted network access.
 
+Development of CJ happens in the [CJ repository at Codeberg](https://codeberg.org/bjoernd/cj).
+
 ## Features
 
 - **Containerized Environment**: Runs Claude Code in an isolated Ubuntu 25.04 container
